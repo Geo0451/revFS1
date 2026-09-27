@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FS1 Watchface Editor</title>
+<style>
+  @font-face {
+    font-family: 'IBM Plex Mono';
+    src: local('IBM Plex Mono');
+  }
+  :root{
+    --bg: #100e0a;
+    --panel: #1a160f;
+    --panel-2: #221c12;
+    --line: #3a3122;
+    --amber: #e8a33d;
+    --amber-dim: #8a6a2f;
+    --text: #e9e2d0;
+    --text-dim: #9c9382;
+    --red: #d9695a;
+    --green: #7fae62;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    margin: 0;
+    padding: 28px 20px 60px;
+    min-height: 100vh;
+  }
+  header { max-width: 1180px; margin: 0 auto 24px; }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    margin: 0 0 4px;
+    color: var(--amber);
+  }
+  header p { margin: 0; color: var(--text-dim); font-size: 13px; }
+
+  main {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 340px 1fr 300px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .panel + .panel { margin-top: 20px; }
+  .panel h2 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  label.field { display:block; margin-bottom: 14px; }
+  label.field span.lbl {
+    display:block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px;
+  }
+  input[type=file] {
+    width: 100%; font-size: 12px; color: var(--text-dim);
+    background: var(--panel-2); border: 1px dashed var(--line); border-radius: 4px; padding: 8px;
+  }
+  input[type=file]::file-selector-button {
+    background: #2a2317; color: var(--amber); border: 1px solid var(--line);
+    border-radius: 3px; padding: 5px 10px; font-family: var(--mono); font-size: 11px; margin-right: 10px;
+    cursor: pointer;
+  }
+  select {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 4px; padding: 7px 8px; font-family: var(--mono); font-size: 13px;
+  }
+  .filestat { font-size: 11px; color: var(--green); margin-top: 4px; min-height: 14px; }
+  .filestat.empty { color: var(--text-dim); }
+  .filestat.err { color: var(--red); }
+
+  button {
+    font-family: var(--mono); font-size: 13px; font-weight: 600; cursor: pointer;
+    border-radius: 4px; border: 1px solid var(--line); padding: 10px 14px;
+    background: var(--panel-2); color: var(--text); width: 100%;
+  }
+  button.primary { background: var(--amber); color: #1a1200; border-color: var(--amber); }
+  button.primary:hover { background: #f3ae49; }
+  button:hover { border-color: var(--amber-dim); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button + button { margin-top: 8px; }
+
+  /* --- canvas / workspace --- */
+  .stage-wrap { display:flex; flex-direction:column; align-items:center; gap: 10px; }
+  .stage-outer {
+    position: relative;
+    width: 480px; height: 568px;
+    background: #000;
+    border-radius: 26px;
+    border: 4px solid #2a2417;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  canvas#bgCanvas { position:absolute; top:0; left:0; width:480px; height:568px; image-rendering: pixelated; }
+  .widget {
+    position: absolute;
+    border: 1.5px solid var(--amber);
+    background: rgba(232,163,61,0.14);
+    cursor: grab;
+    touch-action: none;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 10px; color: var(--amber); user-select:none;
+    border-radius: 2px;
+  }
+  .widget:active { cursor: grabbing; background: rgba(232,163,61,0.3); z-index: 10; }
+  .widget .ico { font-size: 14px; }
+  .coordread { position:absolute; bottom:6px; right:8px; font-size:10px; color: rgba(233,226,208,0.55); }
+
+  table.wtable { width:100%; border-collapse: collapse; font-size: 11px; }
+  table.wtable th, table.wtable td {
+    text-align: left; padding: 5px 4px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  table.wtable input[type=checkbox] { accent-color: var(--amber); cursor: pointer; }
+  table.wtable th { color: var(--text-dim); font-weight: 500; }
+  table.wtable td.num { color: var(--amber); font-variant-numeric: tabular-nums; }
+
+  .log {
+    background: #0b0906; border: 1px solid var(--line); border-radius: 4px;
+    font-size: 11px; padding: 10px; max-height: 220px; overflow-y: auto;
+    color: var(--text-dim); white-space: pre-wrap; line-height: 1.5;
+  }
+  .log .ok { color: var(--green); }
+  .log .warn { color: var(--amber); }
+  .log .err { color: var(--red); }
+
+  .hint { font-size: 11px; color: var(--text-dim); line-height: 1.5; margin-top: 10px; }
+  .hint b { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>FS1 Watchface Editor</h1>
+  <p>Ported from your photo_to_face.py + bgproto.py — same checksum, same chunking, same resource-table lookup. Widget positions verified against the real 48-byte-per-widget table in clean.bin.</p>
+</header>
+
+<main>
+  <!-- LEFT: inputs -->
+  <div>
+    <div class="panel">
+      <h2>1. Template</h2>
+      <label class="field">
+        <span class="lbl">clean2.bin (known-good face)</span>
+        <input type="file" id="f-template" accept=".bin">
+        <div class="filestat empty" id="stat-template">No file loaded.</div>
+      </label>
+
+      <h2 style="margin-top:18px;">2. Photo</h2>
+      <label class="field">
+        <span class="lbl">Your photo</span>
+        <input type="file" id="f-photo" accept="image/*">
+        <div class="filestat empty" id="stat-photo">No photo loaded.</div>
+      </label>
+      <label class="field">
+        <span class="lbl">Fit</span>
+        <select id="sel-fit">
+          <option value="cover" selected>cover (crop to fill)</option>
+          <option value="contain">contain (letterbox)</option>
+          <option value="stretch">stretch</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="panel">
+      <h2>3. AT command wrapper (optional)</h2>
+      <label class="field">
+        <span class="lbl">Pre-commands, e.g. expwrite.txt</span>
+        <input type="file" id="f-pre" accept=".txt">
+        <div class="filestat empty" id="stat-pre">Not loaded — remembers last file via this browser.</div>
+      </label>
+      <label class="field">
+        <span class="lbl">Post-commands, e.g. at_post.txt</span>
+        <input type="file" id="f-post" accept=".txt">
+        <div class="filestat empty" id="stat-post">Not loaded — remembers last file via this browser.</div>
+      </label>
+      <button id="btn-clear-cache">Clear remembered pre/post files</button>
+    </div>
+  </div>
+
+  <!-- CENTER: canvas -->
+  <div class="stage-wrap">
+    <div class="stage-outer" id="stage">
+      <canvas id="bgCanvas" width="240" height="284"></canvas>
+      <!-- widgets injected by JS -->
+      <div class="coordread" id="coordread"></div>
+    </div>
+    <div class="hint" style="text-align:center; max-width:480px;">
+      Drag the boxes to reposition Hours / Minutes / Battery / Steps / Calories / Heart Rate.
+      Sizes come from the template and aren't editable here.
+    </div>
+  </div>
+
+  <!-- RIGHT: widget table + export -->
+  <div>
+    <div class="panel">
+      <h2>Widget positions</h2>
+      <table class="wtable" id="wtable">
+        <thead><tr><th>show</th><th>widget</th><th>x</th><th>y</th><th>offset</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button id="btn-reset-positions" style="margin-top:12px;">Reset to template defaults</button>
+      <div class="hint">
+        Unchecking "show" doesn't erase the widget's position — it moves it off-canvas
+        (x=250, y=300) only in the exported file, so you can re-check it later without
+        losing where you'd placed it. Note: this hides the <b>live number</b> the watch draws
+        for that widget. If a widget's icon is baked into your photo itself (not drawn by the
+        watch), you'll need to paint over it in the photo separately.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Export</h2>
+      <button class="primary" id="btn-export-full">Download writes_full.txt</button>
+      <button id="btn-export-body">Download writes_body.txt only</button>
+      <button id="btn-export-bin">Download patched.bin</button>
+      <div class="hint">
+        <b>writes_full.txt</b> = pre-commands + body + post-commands, renumbered — matches your
+        <code>cat expwrite.txt writes_body_patched.txt at_post.txt | awk ...</code> pipeline exactly.
+        If pre/post aren't loaded, it's just the body.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Log</h2>
+      <div class="log" id="log">Waiting for template...</div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ============================================================================
+// Constants ported directly from bgproto.py / photo_to_face.py
+// ============================================================================
+const MAGIC = [0xFF, 0xFF, 0x42, 0x47]; // b"\xff\xffBG"
+const CMD_DATA = 0x03;
+const TYPE_FACE = 0xF4;
+const BLOCK = 2048;
+const PAYLOAD = 242;
+
+const IMG_W = 240, IMG_H = 284;
+const RES_BASE = 0xA00;   // fixed value confirmed on real hardware (pixel-shift fix)
+const RES_TABLE = 0xA44;
+const RES_COUNT = 7;
+
+// Widget table: independently verified against clean.bin (48-byte stride from 0x630,
+// X at base+0x0C, Y at base+0x0E, W at base+0x14, H at base+0x16 — all little-endian u16).
+// Confirmed two ways: (1) the record structure repeats byte-for-byte identically past X/Y/W/H
+// (same trailing type/flag bytes across widgets of the same kind), and (2) overlaying these
+// boxes on the rendered background lands them exactly beside their matching icons.
+const WIDGET_DEFS = [
+  { key: 'hours',     label: 'Hours',       icon: '🕐', base: 0x630 },
+  { key: 'minutes',   label: 'Minutes',     icon: '🕐', base: 0x660 },
+  { key: 'battery',   label: 'Battery',     icon: '🔋', base: 0x690 },
+  { key: 'steps',     label: 'Steps',       icon: '👣', base: 0x6C0 },
+  { key: 'calories',  label: 'Calories',    icon: '🔥', base: 0x6F0 },
+  { key: 'heartrate', label: 'Heart Rate',  icon: '❤️', base: 0x720 },
+];
+function xOff(w){ return w.base + 0x0C; }
+function yOff(w){ return w.base + 0x0E; }
+function wOff(w){ return w.base + 0x14; }
+function hOff(w){ return w.base + 0x16; }
+
+// Where a "hidden" widget gets moved to in the exported file — safely outside the
+// 240x284 visible canvas for any of these widgets' sizes, well within u16 range.
+const HIDE_X = 250, HIDE_Y = 300;
+
+// ============================================================================
+// State
+// ============================================================================
+let templateBytes = null;   // Uint8Array of clean2.bin, untouched
+let photoImg = null;        // HTMLImageElement
+let widgetState = {};       // key -> {x,y,w,h}
+let imageOffsetCached = null;
+let preHex = [];            // array of hex strings (pre-commands)
+let postHex = [];           // array of hex strings (post-commands)
+
+const CANVAS_SCALE = 2;     // 240x284 -> 480x568 on screen
+
+// ============================================================================
+// Logging
+// ============================================================================
+const logEl = document.getElementById('log');
+function log(msg, cls) {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+function setStat(id, msg, cls) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'filestat' + (cls ? ' ' + cls : '');
+}
+
+// ============================================================================
+// Byte helpers
+// ============================================================================
+function readU16LE(bytes, off) { return bytes[off] | (bytes[off + 1] << 8); }
+function writeU16LE(bytes, off, val) { bytes[off] = val & 0xFF; bytes[off + 1] = (val >> 8) & 0xFF; }
+function readU32LE(bytes, off) {
+  return (bytes[off] | (bytes[off+1]<<8) | (bytes[off+2]<<16) | (bytes[off+3]<<24)) >>> 0;
+}
+function bytesToHex(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += bytes[i].toString(16).padStart(2, '0');
+  return s;
+}
+function hexToBytes(hex) {
+  hex = hex.trim();
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+  return out;
+}
+
+// ============================================================================
+// bgproto.py port — checksum, header, data_frames, build_transfer
+// ============================================================================
+function checksum(bytes) {
+  // "One's complement of the byte sum, carries folded back in (16-bit)."
+  let s = 0;
+  for (let i = 0; i < bytes.length; i++) s += bytes[i];
+  while (s >> 16) s = (s & 0xFFFF) + (s >> 16);
+  return (~s) & 0xFFFF;
+}
+
+function concatBytes(arrs) {
+  let total = 0;
+  for (const a of arrs) total += a.length;
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrs) { out.set(a, off); off += a.length; }
+  return out;
+}
+
+function u16be(v) { return new Uint8Array([(v >> 8) & 0xFF, v & 0xFF]); }
+function u32be(v) { return new Uint8Array([(v>>>24)&0xFF, (v>>>16)&0xFF, (v>>>8)&0xFF, v&0xFF]); }
+
+function buildHeader(cmd, typ, length, params /* 8 bytes */) {
+  // 20-byte header: magic | 01 00 | cmd | type | len(u16 BE) | 8 param bytes | checksum(u16 BE)
+  const body = concatBytes([
+    new Uint8Array(MAGIC), new Uint8Array([0x01, 0x00]),
+    new Uint8Array([cmd, typ]), u16be(length), params
+  ]);
+  const ck = checksum(body);
+  return concatBytes([body, u16be(ck)]);
+}
+
+function dataFrames(payload, chunk) {
+  chunk = chunk || PAYLOAD;
+  const out = [];
+  let total = 0;
+  for (let i = 0; i < payload.length; i += chunk) {
+    const part = payload.subarray(i, i + chunk);
+    total += part.length;
+    const frame = new Uint8Array(2 + part.length);
+    frame[0] = out.length & 0xFF;
+    frame[1] = total & 0xFF;
+    frame.set(part, 2);
+    out.push(frame);
+  }
+  return out;
+}
+
+function buildTransfer(data, typ) {
+  typ = (typ === undefined) ? TYPE_FACE : typ;
+  const nblocks = Math.ceil(data.length / BLOCK);
+  const writes = [];
+  for (let k = 0; k < nblocks; k++) {
+    const part = data.subarray(k * BLOCK, (k + 1) * BLOCK);
+    const ck = checksum(part);
+    const payload = concatBytes([part, u16be(ck)]);
+    const params = concatBytes([u32be(k * BLOCK), u16be(nblocks), u16be(k + 1)]);
+    writes.push(buildHeader(CMD_DATA, typ, payload.length, params));
+    writes.push(...dataFrames(payload, PAYLOAD));
+  }
+  return writes;
+}
+
+// ============================================================================
+// resource_table() / image_offset() port
+// ============================================================================
+function resourceTable(face) {
+  const out = [];
+  for (let i = 0; i < RES_COUNT; i++) {
+    out.push(readU32LE(face, RES_TABLE + 4 * i) + RES_BASE);
+  }
+  return out;
+}
+function imageOffset(face) {
+  const tbl = resourceTable(face);
+  const off = tbl[0], nxt = tbl[1];
+  if (nxt - off !== IMG_W * IMG_H * 2) {
+    throw new Error(`asset 0 is not exactly ${IMG_W}x${IMG_H}x2 bytes (got ${nxt - off}) - ` +
+                     `this template has a different layout than the one these offsets were verified against`);
+  }
+  return off;
+}
+
+// ============================================================================
+// photo_to_face.py port — fit_image + to_rgb565_be
+// ============================================================================
+function fitImageToCanvas(img, w, h, mode) {
+  const out = document.createElement('canvas');
+  out.width = w; out.height = h;
+  const ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const srcRatio = img.width / img.height;
+  const dstRatio = w / h;
+
+  if (mode === 'stretch') {
+    ctx.drawImage(img, 0, 0, w, h);
+    return out;
+  }
+
+  if (mode === 'cover') {
+    let newW, newH;
+    if (srcRatio > dstRatio) { newH = h; newW = Math.round(h * srcRatio); }
+    else { newW = w; newH = Math.round(w / srcRatio); }
+    const tmp = document.createElement('canvas');
+    tmp.width = newW; tmp.height = newH;
+    const tctx = tmp.getContext('2d');
+    tctx.imageSmoothingEnabled = true; tctx.imageSmoothingQuality = 'high';
+    tctx.drawImage(img, 0, 0, newW, newH);
+    const x0 = Math.floor((newW - w) / 2), y0 = Math.floor((newH - h) / 2);
+    ctx.drawImage(tmp, x0, y0, w, h, 0, 0, w, h);
+    return out;
+  }
+
+  if (mode === 'contain') {
+    let newW, newH;
+    if (srcRatio > dstRatio) { newW = w; newH = Math.round(w / srcRatio); }
+    else { newH = h; newW = Math.round(h * srcRatio); }
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+    const dx = Math.floor((w - newW) / 2), dy = Math.floor((h - newH) / 2);
+    ctx.drawImage(img, dx, dy, newW, newH);
+    return out;
+  }
+
+  throw new Error('unknown fit mode ' + mode);
+}
+
+function toRGB565BE(canvas) {
+  const ctx = canvas.getContext('2d');
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const out = new Uint8Array(width * height * 2);
+  let o = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const r = (data[i]   >> 3) & 0x1F;
+    const g = (data[i+1] >> 2) & 0x3F;
+    const b = (data[i+2] >> 3) & 0x1F;
+    const px = (r << 11) | (g << 5) | b;
+    out[o++] = (px >> 8) & 0xFF;
+    out[o++] = px & 0xFF;
+  }
+  return out;
+}
+
+// ============================================================================
+// File loading
+// ============================================================================
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsArrayBuffer(file);
+  });
+}
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsText(file);
+  });
+}
+function readFileAsImage(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+function parseHexLines(text) {
+  const lines = text.split('\n');
+  const out = [];
+  for (const line of lines) {
+    const parts = line.split('\t');
+    const hex = (parts.length >= 2 ? parts[1] : line).trim();
+    if (hex.length > 0) out.push(hex);
+  }
+  return out;
+}
+
+// ============================================================================
+// Template loading -> parse widget positions, draw background
+// ============================================================================
+document.getElementById('f-template').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const buf = await readFileAsArrayBuffer(file);
+    templateBytes = new Uint8Array(buf);
+    log(`Loaded ${file.name}: ${templateBytes.length} bytes.`);
+
+    const off = imageOffset(templateBytes);
+    imageOffsetCached = off;
+    log(`image_offset() -> 0x${off.toString(16).toUpperCase()} (resource table checks out).`, 'ok');
+
+    // load widget positions from template
+    for (const w of WIDGET_DEFS) {
+      widgetState[w.key] = {
+        x: readU16LE(templateBytes, xOff(w)),
+        y: readU16LE(templateBytes, yOff(w)),
+        w: readU16LE(templateBytes, wOff(w)),
+        h: readU16LE(templateBytes, hOff(w)),
+        visible: true,
+      };
+    }
+    log('Widget positions read from template:', 'ok');
+    for (const w of WIDGET_DEFS) {
+      const s = widgetState[w.key];
+      log(`  ${w.label.padEnd(11)} x=${s.x} y=${s.y} w=${s.w} h=${s.h}`);
+    }
+
+    setStat('stat-template', `${file.name} — ${templateBytes.length} bytes, image @ 0x${off.toString(16)}`, 'ok');
+    buildWidgetDOM();
+    updateWidgetTable();
+    drawBackground();
+  } catch (err) {
+    console.error(err);
+    setStat('stat-template', 'Error: ' + err.message, 'err');
+    log('Template load failed: ' + err.message, 'err');
+  }
+});
+
+// ============================================================================
+// Photo loading -> live preview
+// ============================================================================
+document.getElementById('f-photo').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    photoImg = await readFileAsImage(file);
+    setStat('stat-photo', `${file.name} — ${photoImg.width}x${photoImg.height}`, 'ok');
+    log(`Loaded photo ${file.name} (${photoImg.width}x${photoImg.height}).`);
+    drawBackground();
+  } catch (err) {
+    setStat('stat-photo', 'Error loading image', 'err');
+    log('Photo load failed: ' + err.message, 'err');
+  }
+});
+document.getElementById('sel-fit').addEventListener('change', drawBackground);
+
+function drawBackground() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, IMG_W, IMG_H);
+
+  if (photoImg) {
+    const mode = document.getElementById('sel-fit').value;
+    const fitted = fitImageToCanvas(photoImg, IMG_W, IMG_H, mode);
+    ctx.drawImage(fitted, 0, 0);
+  } else if (templateBytes) {
+    // show the template's own background image as a placeholder
+    const off = imageOffsetCached;
+    const imgData = ctx.createImageData(IMG_W, IMG_H);
+    for (let p = 0, o = off; p < IMG_W * IMG_H; p++, o += 2) {
+      const val = (templateBytes[o] << 8) | templateBytes[o + 1];
+      const r = (val >> 11) & 0x1F, g = (val >> 5) & 0x3F, b = val & 0x1F;
+      imgData.data[p*4+0] = (r * 255 / 31) | 0;
+      imgData.data[p*4+1] = (g * 255 / 63) | 0;
+      imgData.data[p*4+2] = (b * 255 / 31) | 0;
+      imgData.data[p*4+3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  } else {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, IMG_W, IMG_H);
+  }
+}
+
+// ============================================================================
+// Widget overlay DOM + dragging
+// ============================================================================
+const stage = document.getElementById('stage');
+const coordread = document.getElementById('coordread');
+
+function buildWidgetDOM() {
+  document.querySelectorAll('.widget').forEach(el => el.remove());
+  for (const w of WIDGET_DEFS) {
+    const s = widgetState[w.key];
+    const el = document.createElement('div');
+    el.className = 'widget';
+    el.id = 'w-' + w.key;
+    el.dataset.key = w.key;
+    el.style.width = (s.w * CANVAS_SCALE) + 'px';
+    el.style.height = (s.h * CANVAS_SCALE) + 'px';
+    el.style.left = (s.x * CANVAS_SCALE) + 'px';
+    el.style.top = (s.y * CANVAS_SCALE) + 'px';
+    el.style.opacity = s.visible ? '1' : '0.3';
+    el.innerHTML = `<span class="ico">${w.icon}</span>`;
+    el.title = w.label + (s.visible ? '' : ' (hidden on watch)');
+    stage.appendChild(el);
+    attachDrag(el, w);
+  }
+}
+
+function attachDrag(el, wdef) {
+  let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
+  el.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    origLeft = parseFloat(el.style.left); origTop = parseFloat(el.style.top);
+    el.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    let newLeft = origLeft + dx, newTop = origTop + dy;
+    const s = widgetState[wdef.key];
+    const maxLeft = (IMG_W - s.w) * CANVAS_SCALE;
+    const maxTop = (IMG_H - s.h) * CANVAS_SCALE;
+    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+    newTop = Math.max(0, Math.min(newTop, maxTop));
+    el.style.left = newLeft + 'px';
+    el.style.top = newTop + 'px';
+    s.x = Math.round(newLeft / CANVAS_SCALE);
+    s.y = Math.round(newTop / CANVAS_SCALE);
+    coordread.textContent = `${wdef.label}: x=${s.x} y=${s.y}`;
+    updateWidgetTable();
+  });
+  const end = (e) => { dragging = false; try{el.releasePointerCapture(e.pointerId);}catch(_){} };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+
+function updateWidgetTable() {
+  const tbody = document.querySelector('#wtable tbody');
+  tbody.innerHTML = '';
+  for (const w of WIDGET_DEFS) {
+    const s = widgetState[w.key];
+    if (!s) continue;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input type="checkbox" class="vis-check" data-key="${w.key}" ${s.visible ? 'checked' : ''}></td>` +
+                    `<td>${w.icon} ${w.label}</td><td class="num">${s.x}</td><td class="num">${s.y}</td>` +
+                    `<td class="num">0x${xOff(w).toString(16).toUpperCase()}</td>`;
+    tbody.appendChild(tr);
+  }
+  tbody.querySelectorAll('.vis-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const key = cb.dataset.key;
+      const s = widgetState[key];
+      s.visible = cb.checked;
+      buildWidgetDOM();
+      const w = WIDGET_DEFS.find(w => w.key === key);
+      log(`${w.label}: ${s.visible ? 'shown' : 'hidden'} (position kept, moved off-canvas on export when hidden).`);
+    });
+  });
+}
+
+document.getElementById('btn-reset-positions').addEventListener('click', () => {
+  if (!templateBytes) return;
+  for (const w of WIDGET_DEFS) {
+    const prevVisible = widgetState[w.key] ? widgetState[w.key].visible : true;
+    widgetState[w.key] = {
+      x: readU16LE(templateBytes, xOff(w)),
+      y: readU16LE(templateBytes, yOff(w)),
+      w: readU16LE(templateBytes, wOff(w)),
+      h: readU16LE(templateBytes, hOff(w)),
+      visible: prevVisible,
+    };
+  }
+  buildWidgetDOM();
+  updateWidgetTable();
+  log('Widget positions reset to template defaults (show/hide kept as-is).');
+});
+
+// ============================================================================
+// Pre/post AT command files — load + localStorage cache
+// ============================================================================
+function cachePreview(hexArr) {
+  return hexArr.length + ' line(s), first: ' + (hexArr[0] ? hexArr[0].slice(0, 24) + '...' : '(none)');
+}
+document.getElementById('f-pre').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await readFileAsText(file);
+  preHex = parseHexLines(text);
+  localStorage.setItem('fs1_pre_hex', JSON.stringify(preHex));
+  setStat('stat-pre', `${file.name} — ${cachePreview(preHex)}`, 'ok');
+  log(`Loaded pre-commands: ${preHex.length} lines.`);
+});
+document.getElementById('f-post').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await readFileAsText(file);
+  postHex = parseHexLines(text);
+  localStorage.setItem('fs1_post_hex', JSON.stringify(postHex));
+  setStat('stat-post', `${file.name} — ${cachePreview(postHex)}`, 'ok');
+  log(`Loaded post-commands: ${postHex.length} lines.`);
+});
+document.getElementById('btn-clear-cache').addEventListener('click', () => {
+  localStorage.removeItem('fs1_pre_hex');
+  localStorage.removeItem('fs1_post_hex');
+  preHex = []; postHex = [];
+  setStat('stat-pre', 'Not loaded — remembers last file via this browser.', '');
+  setStat('stat-post', 'Not loaded — remembers last file via this browser.', '');
+  log('Cleared remembered pre/post command files.');
+});
+(function restoreCache() {
+  try {
+    const p = localStorage.getItem('fs1_pre_hex');
+    const q = localStorage.getItem('fs1_post_hex');
+    if (p) { preHex = JSON.parse(p); setStat('stat-pre', `(remembered) ${cachePreview(preHex)}`, 'ok'); }
+    if (q) { postHex = JSON.parse(q); setStat('stat-post', `(remembered) ${cachePreview(postHex)}`, 'ok'); }
+  } catch (_) {}
+})();
+
+// ============================================================================
+// Export
+// ============================================================================
+function downloadBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 200);
+}
+
+function buildPatchedBin() {
+  if (!templateBytes) throw new Error('Load a template (clean2.bin) first.');
+  const patched = new Uint8Array(templateBytes); // copy
+
+  if (photoImg) {
+    const mode = document.getElementById('sel-fit').value;
+    const fitted = fitImageToCanvas(photoImg, IMG_W, IMG_H, mode);
+    const raw = toRGB565BE(fitted);
+    const off = imageOffsetCached;
+    if (raw.length !== IMG_W * IMG_H * 2) throw new Error('unexpected image byte length');
+    patched.set(raw, off);
+    log(`Wrote ${raw.length} image bytes at 0x${off.toString(16)}.`);
+  } else {
+    log('No photo loaded — background left as template default.', 'warn');
+  }
+
+  for (const w of WIDGET_DEFS) {
+    const s = widgetState[w.key];
+    if (s.visible) {
+      writeU16LE(patched, xOff(w), s.x);
+      writeU16LE(patched, yOff(w), s.y);
+    } else {
+      writeU16LE(patched, xOff(w), HIDE_X);
+      writeU16LE(patched, yOff(w), HIDE_Y);
+      log(`${w.label}: hidden - wrote off-canvas position (${HIDE_X},${HIDE_Y}) instead of (${s.x},${s.y}).`);
+    }
+  }
+  log('Wrote widget X/Y positions into patched buffer.');
+
+  return patched;
+}
+
+function buildWritesBodyLines(patched) {
+  const writes = buildTransfer(patched, TYPE_FACE);
+  log(`build_transfer(): ${writes.length} writes for a ${patched.length}-byte file (${Math.ceil(patched.length/BLOCK)} blocks).`);
+  return writes.map(w => bytesToHex(w));
+}
+
+document.getElementById('btn-export-bin').addEventListener('click', () => {
+  try {
+    const patched = buildPatchedBin();
+    downloadBlob('patched.bin', new Blob([patched], { type: 'application/octet-stream' }));
+    log('Downloaded patched.bin.', 'ok');
+  } catch (err) {
+    log('Export failed: ' + err.message, 'err');
+  }
+});
+
+document.getElementById('btn-export-body').addEventListener('click', () => {
+  try {
+    const patched = buildPatchedBin();
+    const body = buildWritesBodyLines(patched);
+    let out = '';
+    body.forEach((h, i) => out += `${i + 1}\t${h}\n`);
+    downloadBlob('writes_body.txt', new Blob([out], { type: 'text/plain' }));
+    log(`Downloaded writes_body.txt (${body.length} lines).`, 'ok');
+  } catch (err) {
+    log('Export failed: ' + err.message, 'err');
+  }
+});
+
+document.getElementById('btn-export-full').addEventListener('click', () => {
+  try {
+    const patched = buildPatchedBin();
+    const body = buildWritesBodyLines(patched);
+    const all = [...preHex, ...body, ...postHex];
+    if (preHex.length === 0 || postHex.length === 0) {
+      log('Pre or post commands not loaded — writes_full.txt will only contain what you have.', 'warn');
+    }
+    let out = '';
+    all.forEach((h, i) => out += `${i + 1}\t${h}\n`);
+    downloadBlob('writes_full.txt', new Blob([out], { type: 'text/plain' }));
+    log(`Downloaded writes_full.txt: ${preHex.length} pre + ${body.length} body + ${postHex.length} post = ${all.length} lines.`, 'ok');
+  } catch (err) {
+    log('Export failed: ' + err.message, 'err');
+  }
+});
+</script>
+</body>
+</html>
