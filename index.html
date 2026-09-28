@@ -144,6 +144,8 @@
 
   .hint { font-size: 11px; color: var(--text-dim); line-height: 1.5; margin-top: 10px; }
   .hint b { color: var(--text); }
+  .grow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+  .grow>div{flex:1 1 100%}
 </style>
 </head>
 <body>
@@ -228,6 +230,20 @@
     </div>
 
     <div class="panel">
+      <h2>Colours &amp; fonts <span style="color:var(--amber-dim)">(experimental)</span></h2>
+      <div id="gtable"><div class="hint">Load a template first.</div></div>
+      <datalist id="fontlist"><option value="Arial"><option value="Impact"><option value="Georgia"><option value="Courier New"><option value="Verdana"><option value="Trebuchet MS"><option value="Times New Roman"><option value="Comic Sans MS"><option value="Arial Black"><option value="monospace"></datalist>
+      <div class="hint">
+        Digits/labels are small pictures stored in the file, so colour is baked into them. Each row is
+        one image set; widgets that share a set (e.g. Hours+Minutes) change together.
+        <b>Colour</b> re-tints the set in place (file size unchanged; safest). <b>Font</b> re-renders
+        the digits from a font installed on <i>this computer</i> and rebuilds the file tail (sizes and
+        directory are rewritten) — untested on the watch, expect to try it a couple of times.
+        Multi-colour sets (AM/PM, weekdays) end up single-tint.
+      </div>
+    </div>
+
+    <div class="panel">
       <h2>Export</h2>
       <button class="primary" id="btn-export-full">Download writes_full.txt</button>
       <button id="btn-export-body">Download writes_body.txt only</button>
@@ -266,7 +282,7 @@ const RES_COUNT = 7;
 // Confirmed two ways: (1) the record structure repeats byte-for-byte identically past X/Y/W/H
 // (same trailing type/flag bytes across widgets of the same kind), and (2) overlaying these
 // boxes on the rendered background lands them exactly beside their matching icons.
-const WIDGET_DEFS = [
+const WIDGET_DEFS_DEFAULT = [
   { key: 'hours',     label: 'Hours',       icon: '🕐', base: 0x630 },
   { key: 'minutes',   label: 'Minutes',     icon: '🕐', base: 0x660 },
   { key: 'battery',   label: 'Battery',     icon: '🔋', base: 0x690 },
@@ -274,6 +290,7 @@ const WIDGET_DEFS = [
   { key: 'calories',  label: 'Calories',    icon: '🔥', base: 0x6F0 },
   { key: 'heartrate', label: 'Heart Rate',  icon: '❤️', base: 0x720 },
 ];
+let WIDGET_DEFS = WIDGET_DEFS_DEFAULT;
 function xOff(w){ return w.base + 0x0C; }
 function yOff(w){ return w.base + 0x0E; }
 function wOff(w){ return w.base + 0x14; }
@@ -530,6 +547,8 @@ document.getElementById('f-template').addEventListener('change', async (e) => {
     imageOffsetCached = off;
     log(`image_offset() -> 0x${off.toString(16).toUpperCase()} (resource table checks out).`, 'ok');
 
+    WIDGET_DEFS = scanWidgets(templateBytes);
+    groupState = buildGroups(templateBytes);
     // load widget positions from template
     for (const w of WIDGET_DEFS) {
       widgetState[w.key] = {
@@ -549,6 +568,7 @@ document.getElementById('f-template').addEventListener('change', async (e) => {
     setStat('stat-template', `${file.name} — ${templateBytes.length} bytes, image @ 0x${off.toString(16)}`, 'ok');
     buildWidgetDOM();
     updateWidgetTable();
+    updateGroupTable();
     drawBackground();
   } catch (err) {
     console.error(err);
@@ -739,6 +759,153 @@ document.getElementById('btn-clear-cache').addEventListener('click', () => {
 })();
 
 // ============================================================================
+// Glyph images: colors & fonts (decoded format, see README). Directory @0xA40 (u32 LE,
+// +0xA00), count @0xA0C, images = row-offset table + RLE rows: [n][r] + n*u16BE,
+// each value repeated r times. Transparent key colour = u16 LE at widget record +0x36.
+// ============================================================================
+const DIR_OFF = 0xA40, CNT_OFF = 0xA0C;
+function readU32(b,o){ return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0; }
+function writeU32(b,o,v){ b[o]=v&255; b[o+1]=(v>>>8)&255; b[o+2]=(v>>>16)&255; b[o+3]=(v>>>24)&255; }
+function unpack565(v){ return [((v>>11)&31)*255/31, ((v>>5)&63)*255/63, (v&31)*255/31]; }
+function pack565(c){ const q=x=>Math.max(0,Math.min(255,Math.round(x)));
+  return ((q(c[0])>>3)<<11)|((q(c[1])>>2)<<5)|(q(c[2])>>3); }
+function hex2rgb(h){ return [1,3,5].map(i=>parseInt(h.substr(i,2),16)); }
+function rgb2hex(c){ return '#'+c.map(x=>Math.round(x).toString(16).padStart(2,'0')).join(''); }
+const lum = c => 0.299*c[0]+0.587*c[1]+0.114*c[2];
+
+function scanWidgets(d){
+  const out=[];
+  for(let base=0x630; base<0x900; base+=0x30){
+    if(!readU16LE(d,base+0x14) && !readU16LE(d,base+0x16)) break;
+    out.push({base});
+  }
+  const std=['hours','minutes','battery','steps','calories','heartrate'];
+  if(out.length===6) return WIDGET_DEFS_DEFAULT.map(w=>({...w}));
+  return out.map((w,i)=>({ key:'w'+i, base:w.base, icon:'▣',
+    label: i===0?'Hours': i===1?'Minutes':`Widget ${i+1} (${readU16LE(d,w.base+0x14)}×${readU16LE(d,w.base+0x16)})` }));
+}
+
+function parseImages(d){
+  const cnt=readU32(d,CNT_OFF), imgs=[];
+  for(let i=2;i<cnt;i++){
+    const p=readU32(d,DIR_OFF+4*i)+RES_BASE, H=readU32(d,p)/4, offs=[];
+    for(let j=0;j<H;j++) offs.push(readU32(d,p+4*j));
+    const rows=[]; let W=0, q=0;
+    for(let j=0;j<H;j++){
+      q=p+offs[j]; const end=j+1<H?p+offs[j+1]:1e12; let px=0; const rec=[];
+      while(q<end && (j+1<H || px<W)){ const n=d[q], r=d[q+1]; rec.push([q,n,r]); q+=2+2*n; px+=n*r; }
+      if(j===0) W=px; rows.push(rec);
+    }
+    imgs.push({idx:i,p,W,H,size:q-p,rows});
+  }
+  return imgs;
+}
+
+// Widget -> image group (consecutive images of the same size, starting at the widget's index)
+function buildGroups(d){
+  const imgs=parseImages(d), groups={};
+  for(const w of WIDGET_DEFS){
+    const idx=d[w.base+0x18], key=readU16LE(d,w.base+0x36), first=imgs[idx-2];
+    if(!first) continue;
+    const g=groups[idx]||(groups[idx]={idx,key,kind:d[w.base+0x1C],members:[],imgs:[]});
+    g.members.push(w.label);
+    if(!g.imgs.length) for(let k=idx-2;k<imgs.length&&imgs[k].W===first.W&&imgs[k].H===first.H;k++) g.imgs.push(imgs[k]);
+  }
+  for(const g of Object.values(groups)){   // dominant non-key colour
+    const hist={};
+    for(const im of g.imgs) for(const row of im.rows) for(const [q,n,r] of row) for(let k=0;k<n;k++){
+      const v=(d[q+2+2*k]<<8)|d[q+3+2*k]; if(v!==g.key) hist[v]=(hist[v]||0)+r; }
+    g.main=+Object.keys(hist).sort((a,b)=>hist[b]-hist[a])[0]||0xFFFF;
+    g.orig=rgb2hex(unpack565(g.main)); g.color=g.orig; g.font='';
+  }
+  return groups;
+}
+
+function recolorGroup(buf,g){
+  const N=hex2rgb(g.color), lM=lum(unpack565(g.main));
+  for(const im of g.imgs) for(const row of im.rows) for(const [q,n] of row) for(let k=0;k<n;k++){
+    const o=q+2+2*k, v=(buf[o]<<8)|buf[o+1]; if(v===g.key) continue;
+    const t=lum(unpack565(v))/lM; let nv=pack565(N.map(x=>x*t));
+    if(nv===g.key) nv^=1; buf[o]=nv>>8; buf[o+1]=nv&255;
+  }
+}
+
+// ---- experimental: render digits from a browser font and RLE-encode them ----
+function glyphPixels(g,font,colorHex){
+  const {W,H}=g.imgs[0], chars=('0123456789./-:').slice(0,g.imgs.length), fg=hex2rgb(colorHex);
+  const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d',{willReadFrequently:true});
+  const fam=`"${font}", sans-serif`; x.font=`100px ${fam}`;
+  const m=x.measureText('8'), h100=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+  let size=100*H*0.9/h100; x.font=`${size}px ${fam}`;
+  const wmax=Math.max(...[...'0123456789'].map(ch=>x.measureText(ch).width));
+  if(wmax>W*0.96){ size*=W*0.96/wmax; x.font=`${size}px ${fam}`; }
+  const m2=x.measureText('8'), base=(H+m2.actualBoundingBoxAscent-m2.actualBoundingBoxDescent)/2;
+  x.textAlign='center'; x.fillStyle='#fff';
+  return [...chars].map(ch=>{
+    x.clearRect(0,0,W,H); x.fillText(ch,W/2,base);
+    const a=x.getImageData(0,0,W,H).data, px=new Uint16Array(W*H);
+    for(let i=0;i<W*H;i++){ const al=a[i*4+3]; let v=g.key;
+      if(al>=64){ v=pack565(fg.map(f=>f*al/255)); if(v===g.key) v^=1; } px[i]=v; }
+    return px;
+  });
+}
+function encodeImage(px,W,H){
+  const rows=[]; for(let y=0;y<H;y++){ const r=[]; let i=0;
+    while(i<W){ let j=i; while(j<W&&j-i<255&&px[y*W+j]===px[y*W+i]) j++; r.push(1,j-i,px[y*W+i]>>8,px[y*W+i]&255); i=j; }
+    rows.push(r); }
+  const out=[]; let off=4*H; const tbl=new Uint8Array(4*H);
+  rows.forEach((r,y)=>{ writeU32(tbl,4*y,off); off+=r.length; });
+  return concatBytes([tbl,...rows.map(r=>new Uint8Array(r))]);
+}
+
+// Rebuild the image tail after some images were replaced; fix directory + size fields.
+function rebuildImages(buf,repl){
+  const imgs=parseImages(buf), cnt=readU32(buf,CNT_OFF), first=imgs[0].p, last=imgs[imgs.length-1];
+  const parts=[]; let pos=first;
+  imgs.forEach(im=>{ const data=repl.get(im.idx)||buf.slice(im.p,im.p+im.size);
+    writeU32(buf,DIR_OFF+4*im.idx,pos-RES_BASE); parts.push(data); pos+=data.length; });
+  const out=concatBytes([buf.slice(0,first),...parts,buf.slice(last.p+last.size)]);
+  const t=out.length; [0x32,0x42].forEach(o=>writeU32(out,o,t-0x200)); writeU32(out,0x208,t-0x600);
+  writeU32(out,0xA38,t-(DIR_OFF+4*(cnt+4)));
+  return out;
+}
+
+function applyGroupEdits(buf){
+  const repl=new Map();
+  for(const g of Object.values(groupState)){
+    if(g.font){
+      const px=glyphPixels(g,g.font,g.color), {W,H}=g.imgs[0];
+      g.imgs.forEach((im,i)=>repl.set(im.idx,encodeImage(px[i],W,H)));
+      log(`${g.members.join('+')}: font "${g.font}" rendered (${g.imgs.length} glyphs, ${W}x${H}).`,'warn');
+    } else if(g.color!==g.orig){ recolorGroup(buf,g); log(`${g.members.join('+')}: recoloured ${g.orig} -> ${g.color}.`); }
+  }
+  return repl.size ? rebuildImages(buf,repl) : buf;
+}
+
+let groupState = {};
+const FONTS=['Arial','Impact','Georgia','Courier New','Verdana','Trebuchet MS','Times New Roman','Comic Sans MS','Arial Black','monospace'];
+function updateGroupTable(){
+  const box=document.getElementById('gtable'); box.innerHTML='';
+  if(!templateBytes) return;
+  for(const g of Object.values(groupState)){
+    const {W,H}=g.imgs[0], digits=g.kind===4 && g.imgs.length>=10;
+    const row=document.createElement('div'); row.className='grow';
+    row.innerHTML=`<div><b>${g.members.join(' + ')}</b> <span class="hint">${W}×${H} ×${g.imgs.length}</span></div>
+      <input type="color" value="${g.color}">
+      ${digits?`<input type="text" list="fontlist" placeholder="font (optional)" value="${g.font}" style="width:130px">`:''}
+      <canvas width="${digits?g.imgs.length*(W+2):1}" height="${digits?H:1}" style="max-width:100%;background:#222"></canvas>`;
+    box.appendChild(row);
+    const [col,fnt]=row.querySelectorAll('input'), cv=row.querySelector('canvas');
+    const draw=()=>{ if(!digits||!g.font) return; try{ const px=glyphPixels(g,g.font,g.color), cx=cv.getContext('2d');
+        cx.clearRect(0,0,cv.width,cv.height);
+        px.forEach((p,i)=>{ const id=cx.createImageData(W,H); p.forEach((v,k)=>{ if(v===g.key) return; const c=unpack565(v);
+          id.data.set([c[0],c[1],c[2],255],k*4); }); cx.putImageData(id,i*(W+2),0); }); }catch(e){ log('font preview: '+e.message,'err'); } };
+    col.addEventListener('input',()=>{ g.color=col.value; draw(); });
+    if(fnt) fnt.addEventListener('change',()=>{ g.font=fnt.value.trim(); draw(); });
+  }
+}
+
+// ============================================================================
 // Export
 // ============================================================================
 function downloadBlob(filename, blob) {
@@ -751,7 +918,7 @@ function downloadBlob(filename, blob) {
 
 function buildPatchedBin() {
   if (!templateBytes) throw new Error('Load a template (clean2.bin) first.');
-  const patched = new Uint8Array(templateBytes); // copy
+  let patched = new Uint8Array(templateBytes); // copy
 
   if (photoImg) {
     const mode = document.getElementById('sel-fit').value;
@@ -777,6 +944,7 @@ function buildPatchedBin() {
     }
   }
   log('Wrote widget X/Y positions into patched buffer.');
+  patched = applyGroupEdits(patched);
 
   return patched;
 }
