@@ -1,999 +1,1932 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FS1 Watchface Editor</title>
-<style>
-  @font-face {
-    font-family: 'IBM Plex Mono';
-    src: local('IBM Plex Mono');
-  }
-  :root{
-    --bg: #100e0a;
-    --panel: #1a160f;
-    --panel-2: #221c12;
-    --line: #3a3122;
-    --amber: #e8a33d;
-    --amber-dim: #8a6a2f;
-    --text: #e9e2d0;
-    --text-dim: #9c9382;
-    --red: #d9695a;
-    --green: #7fae62;
-    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  * { box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--mono);
-    margin: 0;
-    padding: 28px 20px 60px;
-    min-height: 100vh;
-  }
-  header { max-width: 1180px; margin: 0 auto 24px; }
-  h1 {
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    margin: 0 0 4px;
-    color: var(--amber);
-  }
-  header p { margin: 0; color: var(--text-dim); font-size: 13px; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FS1 Watchface Editor</title>
+    <style>
+      @font-face {
+        font-family: "IBM Plex Mono";
+        src: local("IBM Plex Mono");
+      }
+      :root {
+        --bg: #100e0a;
+        --panel: #1a160f;
+        --panel-2: #221c12;
+        --line: #3a3122;
+        --amber: #e8a33d;
+        --amber-dim: #8a6a2f;
+        --text: #e9e2d0;
+        --text-dim: #9c9382;
+        --red: #d9695a;
+        --green: #7fae62;
+        --mono:
+          "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+          monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--mono);
+        margin: 0;
+        padding: 28px 20px 60px;
+        min-height: 100vh;
+      }
+      header {
+        max-width: 1180px;
+        margin: 0 auto 24px;
+      }
+      h1 {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        margin: 0 0 4px;
+        color: var(--amber);
+      }
+      header p {
+        margin: 0;
+        color: var(--text-dim);
+        font-size: 13px;
+      }
 
-  main {
-    max-width: 1180px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 340px 1fr 300px;
-    gap: 20px;
-    align-items: start;
-  }
-  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 340px 1fr 300px;
+        gap: 20px;
+        align-items: start;
+      }
+      @media (max-width: 980px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
 
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 16px;
-  }
-  .panel + .panel { margin-top: 20px; }
-  .panel h2 {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    margin: 0 0 12px;
-    font-weight: 600;
-  }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 16px;
+      }
+      .panel + .panel {
+        margin-top: 20px;
+      }
+      .panel h2 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-dim);
+        margin: 0 0 12px;
+        font-weight: 600;
+      }
 
-  label.field { display:block; margin-bottom: 14px; }
-  label.field span.lbl {
-    display:block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px;
-  }
-  input[type=file] {
-    width: 100%; font-size: 12px; color: var(--text-dim);
-    background: var(--panel-2); border: 1px dashed var(--line); border-radius: 4px; padding: 8px;
-  }
-  input[type=file]::file-selector-button {
-    background: #2a2317; color: var(--amber); border: 1px solid var(--line);
-    border-radius: 3px; padding: 5px 10px; font-family: var(--mono); font-size: 11px; margin-right: 10px;
-    cursor: pointer;
-  }
-  select {
-    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
-    border-radius: 4px; padding: 7px 8px; font-family: var(--mono); font-size: 13px;
-  }
-  .filestat { font-size: 11px; color: var(--green); margin-top: 4px; min-height: 14px; }
-  .filestat.empty { color: var(--text-dim); }
-  .filestat.err { color: var(--red); }
+      label.field {
+        display: block;
+        margin-bottom: 14px;
+      }
+      label.field span.lbl {
+        display: block;
+        font-size: 12px;
+        color: var(--text-dim);
+        margin-bottom: 5px;
+      }
+      input[type="file"] {
+        width: 100%;
+        font-size: 12px;
+        color: var(--text-dim);
+        background: var(--panel-2);
+        border: 1px dashed var(--line);
+        border-radius: 4px;
+        padding: 8px;
+      }
+      input[type="file"]::file-selector-button {
+        background: #2a2317;
+        color: var(--amber);
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 5px 10px;
+        font-family: var(--mono);
+        font-size: 11px;
+        margin-right: 10px;
+        cursor: pointer;
+      }
+      select {
+        width: 100%;
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        padding: 7px 8px;
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+      .filestat {
+        font-size: 11px;
+        color: var(--green);
+        margin-top: 4px;
+        min-height: 14px;
+      }
+      .filestat.empty {
+        color: var(--text-dim);
+      }
+      .filestat.err {
+        color: var(--red);
+      }
 
-  button {
-    font-family: var(--mono); font-size: 13px; font-weight: 600; cursor: pointer;
-    border-radius: 4px; border: 1px solid var(--line); padding: 10px 14px;
-    background: var(--panel-2); color: var(--text); width: 100%;
-  }
-  button.primary { background: var(--amber); color: #1a1200; border-color: var(--amber); }
-  button.primary:hover { background: #f3ae49; }
-  button:hover { border-color: var(--amber-dim); }
-  button:disabled { opacity: 0.4; cursor: not-allowed; }
-  button + button { margin-top: 8px; }
+      button {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: 4px;
+        border: 1px solid var(--line);
+        padding: 10px 14px;
+        background: var(--panel-2);
+        color: var(--text);
+        width: 100%;
+      }
+      button.primary {
+        background: var(--amber);
+        color: #1a1200;
+        border-color: var(--amber);
+      }
+      button.primary:hover {
+        background: #f3ae49;
+      }
+      button:hover {
+        border-color: var(--amber-dim);
+      }
+      button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      button + button {
+        margin-top: 8px;
+      }
 
-  /* --- canvas / workspace --- */
-  .stage-wrap { display:flex; flex-direction:column; align-items:center; gap: 10px; }
-  .stage-outer {
-    position: relative;
-    width: 480px; height: 568px;
-    background: #000;
-    border-radius: 26px;
-    border: 4px solid #2a2417;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-  canvas#bgCanvas { position:absolute; top:0; left:0; width:480px; height:568px; image-rendering: pixelated; }
-  .widget {
-    position: absolute;
-    border: 1.5px solid var(--amber);
-    background: rgba(232,163,61,0.14);
-    cursor: grab;
-    touch-action: none;
-    display:flex; align-items:center; justify-content:center;
-    font-size: 10px; color: var(--amber); user-select:none;
-    border-radius: 2px;
-  }
-  .widget:active { cursor: grabbing; background: rgba(232,163,61,0.3); z-index: 10; }
-  .widget .ico { font-size: 14px; }
-  .coordread { position:absolute; bottom:6px; right:8px; font-size:10px; color: rgba(233,226,208,0.55); }
+      /* --- canvas / workspace --- */
+      .stage-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+      .stage-outer {
+        position: relative;
+        width: 480px;
+        height: 568px;
+        background: #000;
+        border-radius: 26px;
+        border: 4px solid #2a2417;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      canvas#bgCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 480px;
+        height: 568px;
+        image-rendering: pixelated;
+      }
+      .widget {
+        position: absolute;
+        border: 1.5px solid var(--amber);
+        background: rgba(232, 163, 61, 0.14);
+        cursor: grab;
+        touch-action: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: var(--amber);
+        user-select: none;
+        border-radius: 2px;
+      }
+      .widget:active {
+        cursor: grabbing;
+        background: rgba(232, 163, 61, 0.3);
+        z-index: 10;
+      }
+      .widget .ico {
+        font-size: 14px;
+      }
+      .coordread {
+        position: absolute;
+        bottom: 6px;
+        right: 8px;
+        font-size: 10px;
+        color: rgba(233, 226, 208, 0.55);
+      }
 
-  table.wtable { width:100%; border-collapse: collapse; font-size: 11px; }
-  table.wtable th, table.wtable td {
-    text-align: left; padding: 5px 4px; border-bottom: 1px solid var(--line); white-space: nowrap;
-  }
-  table.wtable input[type=checkbox] { accent-color: var(--amber); cursor: pointer; }
-  table.wtable th { color: var(--text-dim); font-weight: 500; }
-  table.wtable td.num { color: var(--amber); font-variant-numeric: tabular-nums; }
+      table.wtable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      table.wtable th,
+      table.wtable td {
+        text-align: left;
+        padding: 5px 4px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      table.wtable input[type="checkbox"] {
+        accent-color: var(--amber);
+        cursor: pointer;
+      }
+      table.wtable th {
+        color: var(--text-dim);
+        font-weight: 500;
+      }
+      table.wtable td.num {
+        color: var(--amber);
+        font-variant-numeric: tabular-nums;
+      }
 
-  .log {
-    background: #0b0906; border: 1px solid var(--line); border-radius: 4px;
-    font-size: 11px; padding: 10px; max-height: 220px; overflow-y: auto;
-    color: var(--text-dim); white-space: pre-wrap; line-height: 1.5;
-  }
-  .log .ok { color: var(--green); }
-  .log .warn { color: var(--amber); }
-  .log .err { color: var(--red); }
+      .log {
+        background: #0b0906;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        font-size: 11px;
+        padding: 10px;
+        max-height: 220px;
+        overflow-y: auto;
+        color: var(--text-dim);
+        white-space: pre-wrap;
+        line-height: 1.5;
+      }
+      .log .ok {
+        color: var(--green);
+      }
+      .log .warn {
+        color: var(--amber);
+      }
+      .log .err {
+        color: var(--red);
+      }
 
-  .hint { font-size: 11px; color: var(--text-dim); line-height: 1.5; margin-top: 10px; }
-  .hint b { color: var(--text); }
-  .grow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
-  .grow>div{flex:1 1 100%}
-</style>
-</head>
-<body>
+      .hint {
+        font-size: 11px;
+        color: var(--text-dim);
+        line-height: 1.5;
+        margin-top: 10px;
+      }
+      .hint b {
+        color: var(--text);
+      }
+      canvas#glyphCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 480px;
+        height: 568px;
+        image-rendering: pixelated;
+        pointer-events: none;
+      }
+      .widget {
+        border: 1px dashed rgba(232, 163, 61, 0.7);
+      }
+      .guide {
+        position: absolute;
+        background: #4fd1ff;
+        z-index: 20;
+        pointer-events: none;
+        display: none;
+      }
+      .gv {
+        top: 0;
+        bottom: 0;
+        width: 1px;
+      }
+      .gh {
+        left: 0;
+        right: 0;
+        height: 1px;
+      }
+      .grow {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .grow > div {
+        flex: 1 1 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>FS1 Watchface Editor</h1>
+      <p>
+        Ported from your photo_to_face.py + bgproto.py — same checksum, same
+        chunking, same resource-table lookup. Widget positions verified against
+        the real 48-byte-per-widget table in clean.bin.
+      </p>
+    </header>
 
-<header>
-  <h1>FS1 Watchface Editor</h1>
-  <p>Ported from your photo_to_face.py + bgproto.py — same checksum, same chunking, same resource-table lookup. Widget positions verified against the real 48-byte-per-widget table in clean.bin.</p>
-</header>
+    <main>
+      <!-- LEFT: inputs -->
+      <div>
+        <div class="panel">
+          <h2>1. Template</h2>
+          <label class="field">
+            <span class="lbl">clean2.bin (known-good face)</span>
+            <input type="file" id="f-template" accept=".bin" />
+            <div class="filestat empty" id="stat-template">No file loaded.</div>
+          </label>
 
-<main>
-  <!-- LEFT: inputs -->
-  <div>
-    <div class="panel">
-      <h2>1. Template</h2>
-      <label class="field">
-        <span class="lbl">clean2.bin (known-good face)</span>
-        <input type="file" id="f-template" accept=".bin">
-        <div class="filestat empty" id="stat-template">No file loaded.</div>
-      </label>
+          <h2 style="margin-top: 18px">2. Photo</h2>
+          <label class="field">
+            <span class="lbl">Your photo</span>
+            <input type="file" id="f-photo" accept="image/*" />
+            <div class="filestat empty" id="stat-photo">No photo loaded.</div>
+          </label>
+          <label class="field">
+            <span class="lbl">Fit</span>
+            <select id="sel-fit">
+              <option value="cover" selected>cover (crop to fill)</option>
+              <option value="contain">contain (letterbox)</option>
+              <option value="stretch">stretch</option>
+            </select>
+          </label>
+        </div>
 
-      <h2 style="margin-top:18px;">2. Photo</h2>
-      <label class="field">
-        <span class="lbl">Your photo</span>
-        <input type="file" id="f-photo" accept="image/*">
-        <div class="filestat empty" id="stat-photo">No photo loaded.</div>
-      </label>
-      <label class="field">
-        <span class="lbl">Fit</span>
-        <select id="sel-fit">
-          <option value="cover" selected>cover (crop to fill)</option>
-          <option value="contain">contain (letterbox)</option>
-          <option value="stretch">stretch</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="panel">
-      <h2>3. AT command wrapper (optional)</h2>
-      <label class="field">
-        <span class="lbl">Pre-commands, e.g. expwrite.txt</span>
-        <input type="file" id="f-pre" accept=".txt">
-        <div class="filestat empty" id="stat-pre">Not loaded — remembers last file via this browser.</div>
-      </label>
-      <label class="field">
-        <span class="lbl">Post-commands, e.g. at_post.txt</span>
-        <input type="file" id="f-post" accept=".txt">
-        <div class="filestat empty" id="stat-post">Not loaded — remembers last file via this browser.</div>
-      </label>
-      <button id="btn-clear-cache">Clear remembered pre/post files</button>
-    </div>
-  </div>
-
-  <!-- CENTER: canvas -->
-  <div class="stage-wrap">
-    <div class="stage-outer" id="stage">
-      <canvas id="bgCanvas" width="240" height="284"></canvas>
-      <!-- widgets injected by JS -->
-      <div class="coordread" id="coordread"></div>
-    </div>
-    <div class="hint" style="text-align:center; max-width:480px;">
-      Drag the boxes to reposition Hours / Minutes / Battery / Steps / Calories / Heart Rate.
-      Sizes come from the template and aren't editable here.
-    </div>
-  </div>
-
-  <!-- RIGHT: widget table + export -->
-  <div>
-    <div class="panel">
-      <h2>Widget positions</h2>
-      <table class="wtable" id="wtable">
-        <thead><tr><th>show</th><th>widget</th><th>x</th><th>y</th><th>offset</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <button id="btn-reset-positions" style="margin-top:12px;">Reset to template defaults</button>
-      <div class="hint">
-        Unchecking "show" doesn't erase the widget's position — it moves it off-canvas
-        (x=250, y=300) only in the exported file, so you can re-check it later without
-        losing where you'd placed it. Note: this hides the <b>live number</b> the watch draws
-        for that widget. If a widget's icon is baked into your photo itself (not drawn by the
-        watch), you'll need to paint over it in the photo separately.
+        <div class="panel">
+          <h2>3. AT command wrapper (optional)</h2>
+          <label class="field">
+            <span class="lbl">Pre-commands, e.g. expwrite.txt</span>
+            <input type="file" id="f-pre" accept=".txt" />
+            <div class="filestat empty" id="stat-pre">
+              Not loaded — remembers last file via this browser.
+            </div>
+          </label>
+          <label class="field">
+            <span class="lbl">Post-commands, e.g. at_post.txt</span>
+            <input type="file" id="f-post" accept=".txt" />
+            <div class="filestat empty" id="stat-post">
+              Not loaded — remembers last file via this browser.
+            </div>
+          </label>
+          <button id="btn-clear-cache">Clear remembered pre/post files</button>
+        </div>
       </div>
-    </div>
 
-    <div class="panel">
-      <h2>Colours &amp; fonts <span style="color:var(--amber-dim)">(experimental)</span></h2>
-      <div id="gtable"><div class="hint">Load a template first.</div></div>
-      <datalist id="fontlist"><option value="Arial"><option value="Impact"><option value="Georgia"><option value="Courier New"><option value="Verdana"><option value="Trebuchet MS"><option value="Times New Roman"><option value="Comic Sans MS"><option value="Arial Black"><option value="monospace"></datalist>
-      <div class="hint">
-        Digits/labels are small pictures stored in the file, so colour is baked into them. Each row is
-        one image set; widgets that share a set (e.g. Hours+Minutes) change together.
-        <b>Colour</b> re-tints the set in place (file size unchanged; safest). <b>Font</b> re-renders
-        the digits from a font installed on <i>this computer</i> and rebuilds the file tail (sizes and
-        directory are rewritten) — untested on the watch, expect to try it a couple of times.
-        Multi-colour sets (AM/PM, weekdays) end up single-tint.
+      <!-- CENTER: canvas -->
+      <div class="stage-wrap">
+        <div class="stage-outer" id="stage">
+          <canvas id="bgCanvas" width="240" height="284"></canvas>
+          <canvas id="glyphCanvas" width="240" height="284"></canvas>
+          <!-- widgets injected by JS -->
+          <div class="coordread" id="coordread"></div>
+        </div>
+        <div class="hint" style="text-align: center; max-width: 480px">
+          Drag the boxes to reposition Hours / Minutes / Battery / Steps /
+          Calories / Heart Rate. Sizes come from the template and aren't
+          editable here.
+        </div>
       </div>
-    </div>
 
-    <div class="panel">
-      <h2>Export</h2>
-      <button class="primary" id="btn-export-full">Download writes_full.txt</button>
-      <button id="btn-export-body">Download writes_body.txt only</button>
-      <button id="btn-export-bin">Download patched.bin</button>
-      <div class="hint">
-        <b>writes_full.txt</b> = pre-commands + body + post-commands, renumbered — matches your
-        <code>cat expwrite.txt writes_body_patched.txt at_post.txt | awk ...</code> pipeline exactly.
-        If pre/post aren't loaded, it's just the body.
+      <!-- RIGHT: widget table + export -->
+      <div>
+        <div class="panel">
+          <h2>Widget positions</h2>
+          <table class="wtable" id="wtable">
+            <thead>
+              <tr>
+                <th>show</th>
+                <th>widget</th>
+                <th>x</th>
+                <th>y</th>
+                <th>offset</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <button id="btn-reset-positions" style="margin-top: 12px">
+            Reset to template defaults
+          </button>
+          <div class="hint">
+            Unchecking "show" doesn't erase the widget's position — it moves it
+            off-canvas (x=250, y=300) only in the exported file, so you can
+            re-check it later without losing where you'd placed it. Note: this
+            hides the <b>live number</b> the watch draws for that widget. If a
+            widget's icon is baked into your photo itself (not drawn by the
+            watch), you'll need to paint over it in the photo separately.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>
+            Colours &amp; fonts
+            <span style="color: var(--amber-dim)">(experimental)</span>
+          </h2>
+          <div id="gtable"><div class="hint">Load a template first.</div></div>
+          <datalist id="fontlist">
+            <option value="Arial"></option>
+            <option value="Impact"></option>
+            <option value="Georgia"></option>
+            <option value="Courier New"></option>
+            <option value="Verdana"></option>
+            <option value="Trebuchet MS"></option>
+            <option value="Times New Roman"></option>
+            <option value="Comic Sans MS"></option>
+            <option value="Arial Black"></option>
+            <option value="monospace"></option>
+          </datalist>
+          <div class="hint">
+            The preview shows the real glyphs at their real positions (time =
+            now, numbers = sample). Digits/labels are pictures stored in the
+            file, so colour, font and size are baked in.
+            <b>Height</b> rescales a set (widget W/H are rewritten to match).
+            <b>Font</b> re-renders digits from a font on this computer.
+            <b>Own set</b> gives a widget a private copy of the images (e.g. a
+            different Minutes colour): it appends images and grows the
+            directory, shifting the tables behind it — the most invasive edit
+            here, untested. Hold <b>Shift</b> while dragging to disable
+            snapping.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Export</h2>
+          <button class="primary" id="btn-export-full">
+            Download writes_full.txt
+          </button>
+          <button id="btn-export-body">Download writes_body.txt only</button>
+          <button id="btn-export-bin">Download patched.bin</button>
+          <div class="hint">
+            <b>writes_full.txt</b> = pre-commands + body + post-commands,
+            renumbered — matches your
+            <code
+              >cat expwrite.txt writes_body_patched.txt at_post.txt | awk
+              ...</code
+            >
+            pipeline exactly. If pre/post aren't loaded, it's just the body.
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Log</h2>
+          <div class="log" id="log">Waiting for template...</div>
+        </div>
       </div>
-    </div>
+    </main>
 
-    <div class="panel">
-      <h2>Log</h2>
-      <div class="log" id="log">Waiting for template...</div>
-    </div>
-  </div>
-</main>
+    <script>
+      // ============================================================================
+      // Constants ported directly from bgproto.py / photo_to_face.py
+      // ============================================================================
+      const MAGIC = [0xff, 0xff, 0x42, 0x47]; // b"\xff\xffBG"
+      const CMD_DATA = 0x03;
+      const TYPE_FACE = 0xf4;
+      const BLOCK = 2048;
+      const PAYLOAD = 242;
 
-<script>
-// ============================================================================
-// Constants ported directly from bgproto.py / photo_to_face.py
-// ============================================================================
-const MAGIC = [0xFF, 0xFF, 0x42, 0x47]; // b"\xff\xffBG"
-const CMD_DATA = 0x03;
-const TYPE_FACE = 0xF4;
-const BLOCK = 2048;
-const PAYLOAD = 242;
+      const IMG_W = 240,
+        IMG_H = 284;
+      const RES_BASE = 0xa00; // fixed value confirmed on real hardware (pixel-shift fix)
+      const RES_TABLE = 0xa44;
+      const RES_COUNT = 7;
 
-const IMG_W = 240, IMG_H = 284;
-const RES_BASE = 0xA00;   // fixed value confirmed on real hardware (pixel-shift fix)
-const RES_TABLE = 0xA44;
-const RES_COUNT = 7;
+      // Widget table: independently verified against clean.bin (48-byte stride from 0x630,
+      // X at base+0x0C, Y at base+0x0E, W at base+0x14, H at base+0x16 — all little-endian u16).
+      // Confirmed two ways: (1) the record structure repeats byte-for-byte identically past X/Y/W/H
+      // (same trailing type/flag bytes across widgets of the same kind), and (2) overlaying these
+      // boxes on the rendered background lands them exactly beside their matching icons.
+      const WIDGET_DEFS_DEFAULT = [
+        { key: "hours", label: "Hours", icon: "🕐", base: 0x630 },
+        { key: "minutes", label: "Minutes", icon: "🕐", base: 0x660 },
+        { key: "battery", label: "Battery", icon: "🔋", base: 0x690 },
+        { key: "steps", label: "Steps", icon: "👣", base: 0x6c0 },
+        { key: "calories", label: "Calories", icon: "🔥", base: 0x6f0 },
+        { key: "heartrate", label: "Heart Rate", icon: "❤️", base: 0x720 },
+      ];
+      let WIDGET_DEFS = WIDGET_DEFS_DEFAULT;
+      function xOff(w) {
+        return w.base + 0x0c;
+      }
+      function yOff(w) {
+        return w.base + 0x0e;
+      }
+      function wOff(w) {
+        return w.base + 0x14;
+      }
+      function hOff(w) {
+        return w.base + 0x16;
+      }
 
-// Widget table: independently verified against clean.bin (48-byte stride from 0x630,
-// X at base+0x0C, Y at base+0x0E, W at base+0x14, H at base+0x16 — all little-endian u16).
-// Confirmed two ways: (1) the record structure repeats byte-for-byte identically past X/Y/W/H
-// (same trailing type/flag bytes across widgets of the same kind), and (2) overlaying these
-// boxes on the rendered background lands them exactly beside their matching icons.
-const WIDGET_DEFS_DEFAULT = [
-  { key: 'hours',     label: 'Hours',       icon: '🕐', base: 0x630 },
-  { key: 'minutes',   label: 'Minutes',     icon: '🕐', base: 0x660 },
-  { key: 'battery',   label: 'Battery',     icon: '🔋', base: 0x690 },
-  { key: 'steps',     label: 'Steps',       icon: '👣', base: 0x6C0 },
-  { key: 'calories',  label: 'Calories',    icon: '🔥', base: 0x6F0 },
-  { key: 'heartrate', label: 'Heart Rate',  icon: '❤️', base: 0x720 },
-];
-let WIDGET_DEFS = WIDGET_DEFS_DEFAULT;
-function xOff(w){ return w.base + 0x0C; }
-function yOff(w){ return w.base + 0x0E; }
-function wOff(w){ return w.base + 0x14; }
-function hOff(w){ return w.base + 0x16; }
+      // Where a "hidden" widget gets moved to in the exported file — safely outside the
+      // 240x284 visible canvas for any of these widgets' sizes, well within u16 range.
+      const HIDE_X = 250,
+        HIDE_Y = 300;
 
-// Where a "hidden" widget gets moved to in the exported file — safely outside the
-// 240x284 visible canvas for any of these widgets' sizes, well within u16 range.
-const HIDE_X = 250, HIDE_Y = 300;
+      // ============================================================================
+      // State
+      // ============================================================================
+      let templateBytes = null; // Uint8Array of clean2.bin, untouched
+      let photoImg = null; // HTMLImageElement
+      let widgetState = {}; // key -> {x,y,w,h}
+      let imageOffsetCached = null;
+      let preHex = []; // array of hex strings (pre-commands)
+      let postHex = []; // array of hex strings (post-commands)
 
-// ============================================================================
-// State
-// ============================================================================
-let templateBytes = null;   // Uint8Array of clean2.bin, untouched
-let photoImg = null;        // HTMLImageElement
-let widgetState = {};       // key -> {x,y,w,h}
-let imageOffsetCached = null;
-let preHex = [];            // array of hex strings (pre-commands)
-let postHex = [];           // array of hex strings (post-commands)
+      const CANVAS_SCALE = 2; // 240x284 -> 480x568 on screen
 
-const CANVAS_SCALE = 2;     // 240x284 -> 480x568 on screen
+      // ============================================================================
+      // Logging
+      // ============================================================================
+      const logEl = document.getElementById("log");
+      function log(msg, cls) {
+        const line = document.createElement("div");
+        if (cls) line.className = cls;
+        line.textContent = msg;
+        logEl.appendChild(line);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+      function setStat(id, msg, cls) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.className = "filestat" + (cls ? " " + cls : "");
+      }
 
-// ============================================================================
-// Logging
-// ============================================================================
-const logEl = document.getElementById('log');
-function log(msg, cls) {
-  const line = document.createElement('div');
-  if (cls) line.className = cls;
-  line.textContent = msg;
-  logEl.appendChild(line);
-  logEl.scrollTop = logEl.scrollHeight;
-}
-function setStat(id, msg, cls) {
-  const el = document.getElementById(id);
-  el.textContent = msg;
-  el.className = 'filestat' + (cls ? ' ' + cls : '');
-}
+      // ============================================================================
+      // Byte helpers
+      // ============================================================================
+      function readU16LE(bytes, off) {
+        return bytes[off] | (bytes[off + 1] << 8);
+      }
+      function writeU16LE(bytes, off, val) {
+        bytes[off] = val & 0xff;
+        bytes[off + 1] = (val >> 8) & 0xff;
+      }
+      function readU32LE(bytes, off) {
+        return (
+          (bytes[off] |
+            (bytes[off + 1] << 8) |
+            (bytes[off + 2] << 16) |
+            (bytes[off + 3] << 24)) >>>
+          0
+        );
+      }
+      function bytesToHex(bytes) {
+        let s = "";
+        for (let i = 0; i < bytes.length; i++)
+          s += bytes[i].toString(16).padStart(2, "0");
+        return s;
+      }
+      function hexToBytes(hex) {
+        hex = hex.trim();
+        const out = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < out.length; i++)
+          out[i] = parseInt(hex.substr(i * 2, 2), 16);
+        return out;
+      }
 
-// ============================================================================
-// Byte helpers
-// ============================================================================
-function readU16LE(bytes, off) { return bytes[off] | (bytes[off + 1] << 8); }
-function writeU16LE(bytes, off, val) { bytes[off] = val & 0xFF; bytes[off + 1] = (val >> 8) & 0xFF; }
-function readU32LE(bytes, off) {
-  return (bytes[off] | (bytes[off+1]<<8) | (bytes[off+2]<<16) | (bytes[off+3]<<24)) >>> 0;
-}
-function bytesToHex(bytes) {
-  let s = '';
-  for (let i = 0; i < bytes.length; i++) s += bytes[i].toString(16).padStart(2, '0');
-  return s;
-}
-function hexToBytes(hex) {
-  hex = hex.trim();
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
-  return out;
-}
+      // ============================================================================
+      // bgproto.py port — checksum, header, data_frames, build_transfer
+      // ============================================================================
+      function checksum(bytes) {
+        // "One's complement of the byte sum, carries folded back in (16-bit)."
+        let s = 0;
+        for (let i = 0; i < bytes.length; i++) s += bytes[i];
+        while (s >> 16) s = (s & 0xffff) + (s >> 16);
+        return ~s & 0xffff;
+      }
 
-// ============================================================================
-// bgproto.py port — checksum, header, data_frames, build_transfer
-// ============================================================================
-function checksum(bytes) {
-  // "One's complement of the byte sum, carries folded back in (16-bit)."
-  let s = 0;
-  for (let i = 0; i < bytes.length; i++) s += bytes[i];
-  while (s >> 16) s = (s & 0xFFFF) + (s >> 16);
-  return (~s) & 0xFFFF;
-}
+      function concatBytes(arrs) {
+        let total = 0;
+        for (const a of arrs) total += a.length;
+        const out = new Uint8Array(total);
+        let off = 0;
+        for (const a of arrs) {
+          out.set(a, off);
+          off += a.length;
+        }
+        return out;
+      }
 
-function concatBytes(arrs) {
-  let total = 0;
-  for (const a of arrs) total += a.length;
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const a of arrs) { out.set(a, off); off += a.length; }
-  return out;
-}
+      function u16be(v) {
+        return new Uint8Array([(v >> 8) & 0xff, v & 0xff]);
+      }
+      function u32be(v) {
+        return new Uint8Array([
+          (v >>> 24) & 0xff,
+          (v >>> 16) & 0xff,
+          (v >>> 8) & 0xff,
+          v & 0xff,
+        ]);
+      }
 
-function u16be(v) { return new Uint8Array([(v >> 8) & 0xFF, v & 0xFF]); }
-function u32be(v) { return new Uint8Array([(v>>>24)&0xFF, (v>>>16)&0xFF, (v>>>8)&0xFF, v&0xFF]); }
+      function buildHeader(cmd, typ, length, params /* 8 bytes */) {
+        // 20-byte header: magic | 01 00 | cmd | type | len(u16 BE) | 8 param bytes | checksum(u16 BE)
+        const body = concatBytes([
+          new Uint8Array(MAGIC),
+          new Uint8Array([0x01, 0x00]),
+          new Uint8Array([cmd, typ]),
+          u16be(length),
+          params,
+        ]);
+        const ck = checksum(body);
+        return concatBytes([body, u16be(ck)]);
+      }
 
-function buildHeader(cmd, typ, length, params /* 8 bytes */) {
-  // 20-byte header: magic | 01 00 | cmd | type | len(u16 BE) | 8 param bytes | checksum(u16 BE)
-  const body = concatBytes([
-    new Uint8Array(MAGIC), new Uint8Array([0x01, 0x00]),
-    new Uint8Array([cmd, typ]), u16be(length), params
-  ]);
-  const ck = checksum(body);
-  return concatBytes([body, u16be(ck)]);
-}
+      function dataFrames(payload, chunk) {
+        chunk = chunk || PAYLOAD;
+        const out = [];
+        let total = 0;
+        for (let i = 0; i < payload.length; i += chunk) {
+          const part = payload.subarray(i, i + chunk);
+          total += part.length;
+          const frame = new Uint8Array(2 + part.length);
+          frame[0] = out.length & 0xff;
+          frame[1] = total & 0xff;
+          frame.set(part, 2);
+          out.push(frame);
+        }
+        return out;
+      }
 
-function dataFrames(payload, chunk) {
-  chunk = chunk || PAYLOAD;
-  const out = [];
-  let total = 0;
-  for (let i = 0; i < payload.length; i += chunk) {
-    const part = payload.subarray(i, i + chunk);
-    total += part.length;
-    const frame = new Uint8Array(2 + part.length);
-    frame[0] = out.length & 0xFF;
-    frame[1] = total & 0xFF;
-    frame.set(part, 2);
-    out.push(frame);
-  }
-  return out;
-}
+      function buildTransfer(data, typ) {
+        typ = typ === undefined ? TYPE_FACE : typ;
+        const nblocks = Math.ceil(data.length / BLOCK);
+        const writes = [];
+        for (let k = 0; k < nblocks; k++) {
+          const part = data.subarray(k * BLOCK, (k + 1) * BLOCK);
+          const ck = checksum(part);
+          const payload = concatBytes([part, u16be(ck)]);
+          const params = concatBytes([
+            u32be(k * BLOCK),
+            u16be(nblocks),
+            u16be(k + 1),
+          ]);
+          writes.push(buildHeader(CMD_DATA, typ, payload.length, params));
+          writes.push(...dataFrames(payload, PAYLOAD));
+        }
+        return writes;
+      }
 
-function buildTransfer(data, typ) {
-  typ = (typ === undefined) ? TYPE_FACE : typ;
-  const nblocks = Math.ceil(data.length / BLOCK);
-  const writes = [];
-  for (let k = 0; k < nblocks; k++) {
-    const part = data.subarray(k * BLOCK, (k + 1) * BLOCK);
-    const ck = checksum(part);
-    const payload = concatBytes([part, u16be(ck)]);
-    const params = concatBytes([u32be(k * BLOCK), u16be(nblocks), u16be(k + 1)]);
-    writes.push(buildHeader(CMD_DATA, typ, payload.length, params));
-    writes.push(...dataFrames(payload, PAYLOAD));
-  }
-  return writes;
-}
+      // ============================================================================
+      // resource_table() / image_offset() port
+      // ============================================================================
+      function resourceTable(face) {
+        const out = [];
+        for (let i = 0; i < RES_COUNT; i++) {
+          out.push(readU32LE(face, RES_TABLE + 4 * i) + RES_BASE);
+        }
+        return out;
+      }
+      function imageOffset(face) {
+        const tbl = resourceTable(face);
+        const off = tbl[0],
+          nxt = tbl[1];
+        if (nxt - off !== IMG_W * IMG_H * 2) {
+          throw new Error(
+            `asset 0 is not exactly ${IMG_W}x${IMG_H}x2 bytes (got ${nxt - off}) - ` +
+              `this template has a different layout than the one these offsets were verified against`,
+          );
+        }
+        return off;
+      }
 
-// ============================================================================
-// resource_table() / image_offset() port
-// ============================================================================
-function resourceTable(face) {
-  const out = [];
-  for (let i = 0; i < RES_COUNT; i++) {
-    out.push(readU32LE(face, RES_TABLE + 4 * i) + RES_BASE);
-  }
-  return out;
-}
-function imageOffset(face) {
-  const tbl = resourceTable(face);
-  const off = tbl[0], nxt = tbl[1];
-  if (nxt - off !== IMG_W * IMG_H * 2) {
-    throw new Error(`asset 0 is not exactly ${IMG_W}x${IMG_H}x2 bytes (got ${nxt - off}) - ` +
-                     `this template has a different layout than the one these offsets were verified against`);
-  }
-  return off;
-}
+      // ============================================================================
+      // photo_to_face.py port — fit_image + to_rgb565_be
+      // ============================================================================
+      function fitImageToCanvas(img, w, h, mode) {
+        const out = document.createElement("canvas");
+        out.width = w;
+        out.height = h;
+        const ctx = out.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
 
-// ============================================================================
-// photo_to_face.py port — fit_image + to_rgb565_be
-// ============================================================================
-function fitImageToCanvas(img, w, h, mode) {
-  const out = document.createElement('canvas');
-  out.width = w; out.height = h;
-  const ctx = out.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
+        const srcRatio = img.width / img.height;
+        const dstRatio = w / h;
 
-  const srcRatio = img.width / img.height;
-  const dstRatio = w / h;
+        if (mode === "stretch") {
+          ctx.drawImage(img, 0, 0, w, h);
+          return out;
+        }
 
-  if (mode === 'stretch') {
-    ctx.drawImage(img, 0, 0, w, h);
-    return out;
-  }
+        if (mode === "cover") {
+          let newW, newH;
+          if (srcRatio > dstRatio) {
+            newH = h;
+            newW = Math.round(h * srcRatio);
+          } else {
+            newW = w;
+            newH = Math.round(w / srcRatio);
+          }
+          const tmp = document.createElement("canvas");
+          tmp.width = newW;
+          tmp.height = newH;
+          const tctx = tmp.getContext("2d");
+          tctx.imageSmoothingEnabled = true;
+          tctx.imageSmoothingQuality = "high";
+          tctx.drawImage(img, 0, 0, newW, newH);
+          const x0 = Math.floor((newW - w) / 2),
+            y0 = Math.floor((newH - h) / 2);
+          ctx.drawImage(tmp, x0, y0, w, h, 0, 0, w, h);
+          return out;
+        }
 
-  if (mode === 'cover') {
-    let newW, newH;
-    if (srcRatio > dstRatio) { newH = h; newW = Math.round(h * srcRatio); }
-    else { newW = w; newH = Math.round(w / srcRatio); }
-    const tmp = document.createElement('canvas');
-    tmp.width = newW; tmp.height = newH;
-    const tctx = tmp.getContext('2d');
-    tctx.imageSmoothingEnabled = true; tctx.imageSmoothingQuality = 'high';
-    tctx.drawImage(img, 0, 0, newW, newH);
-    const x0 = Math.floor((newW - w) / 2), y0 = Math.floor((newH - h) / 2);
-    ctx.drawImage(tmp, x0, y0, w, h, 0, 0, w, h);
-    return out;
-  }
+        if (mode === "contain") {
+          let newW, newH;
+          if (srcRatio > dstRatio) {
+            newW = w;
+            newH = Math.round(w / srcRatio);
+          } else {
+            newH = h;
+            newW = Math.round(h * srcRatio);
+          }
+          ctx.fillStyle = "#000";
+          ctx.fillRect(0, 0, w, h);
+          const dx = Math.floor((w - newW) / 2),
+            dy = Math.floor((h - newH) / 2);
+          ctx.drawImage(img, dx, dy, newW, newH);
+          return out;
+        }
 
-  if (mode === 'contain') {
-    let newW, newH;
-    if (srcRatio > dstRatio) { newW = w; newH = Math.round(w / srcRatio); }
-    else { newH = h; newW = Math.round(h * srcRatio); }
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
-    const dx = Math.floor((w - newW) / 2), dy = Math.floor((h - newH) / 2);
-    ctx.drawImage(img, dx, dy, newW, newH);
-    return out;
-  }
+        throw new Error("unknown fit mode " + mode);
+      }
 
-  throw new Error('unknown fit mode ' + mode);
-}
+      function toRGB565BE(canvas) {
+        const ctx = canvas.getContext("2d");
+        const { data, width, height } = ctx.getImageData(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
+        const out = new Uint8Array(width * height * 2);
+        let o = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = (data[i] >> 3) & 0x1f;
+          const g = (data[i + 1] >> 2) & 0x3f;
+          const b = (data[i + 2] >> 3) & 0x1f;
+          const px = (r << 11) | (g << 5) | b;
+          out[o++] = (px >> 8) & 0xff;
+          out[o++] = px & 0xff;
+        }
+        return out;
+      }
 
-function toRGB565BE(canvas) {
-  const ctx = canvas.getContext('2d');
-  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const out = new Uint8Array(width * height * 2);
-  let o = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const r = (data[i]   >> 3) & 0x1F;
-    const g = (data[i+1] >> 2) & 0x3F;
-    const b = (data[i+2] >> 3) & 0x1F;
-    const px = (r << 11) | (g << 5) | b;
-    out[o++] = (px >> 8) & 0xFF;
-    out[o++] = px & 0xFF;
-  }
-  return out;
-}
+      // ============================================================================
+      // File loading
+      // ============================================================================
+      function readFileAsArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsArrayBuffer(file);
+        });
+      }
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsText(file);
+        });
+      }
+      function readFileAsImage(file) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+      }
+      function parseHexLines(text) {
+        const lines = text.split("\n");
+        const out = [];
+        for (const line of lines) {
+          const parts = line.split("\t");
+          const hex = (parts.length >= 2 ? parts[1] : line).trim();
+          if (hex.length > 0) out.push(hex);
+        }
+        return out;
+      }
 
-// ============================================================================
-// File loading
-// ============================================================================
-function readFileAsArrayBuffer(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = reject;
-    r.readAsArrayBuffer(file);
-  });
-}
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result);
-    r.onerror = reject;
-    r.readAsText(file);
-  });
-}
-function readFileAsImage(file) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
-}
-function parseHexLines(text) {
-  const lines = text.split('\n');
-  const out = [];
-  for (const line of lines) {
-    const parts = line.split('\t');
-    const hex = (parts.length >= 2 ? parts[1] : line).trim();
-    if (hex.length > 0) out.push(hex);
-  }
-  return out;
-}
+      // ============================================================================
+      // Template loading -> parse widget positions, draw background
+      // ============================================================================
+      document
+        .getElementById("f-template")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const buf = await readFileAsArrayBuffer(file);
+            templateBytes = new Uint8Array(buf);
+            log(`Loaded ${file.name}: ${templateBytes.length} bytes.`);
 
-// ============================================================================
-// Template loading -> parse widget positions, draw background
-// ============================================================================
-document.getElementById('f-template').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const buf = await readFileAsArrayBuffer(file);
-    templateBytes = new Uint8Array(buf);
-    log(`Loaded ${file.name}: ${templateBytes.length} bytes.`);
+            const off = imageOffset(templateBytes);
+            imageOffsetCached = off;
+            log(
+              `image_offset() -> 0x${off.toString(16).toUpperCase()} (resource table checks out).`,
+              "ok",
+            );
 
-    const off = imageOffset(templateBytes);
-    imageOffsetCached = off;
-    log(`image_offset() -> 0x${off.toString(16).toUpperCase()} (resource table checks out).`, 'ok');
+            WIDGET_DEFS = scanWidgets(templateBytes);
+            initSets();
+            // load widget positions from template
+            for (const w of WIDGET_DEFS) {
+              widgetState[w.key] = {
+                x: readU16LE(templateBytes, xOff(w)),
+                y: readU16LE(templateBytes, yOff(w)),
+                w: readU16LE(templateBytes, wOff(w)),
+                h: readU16LE(templateBytes, hOff(w)),
+                visible: true,
+              };
+            }
+            log("Widget positions read from template:", "ok");
+            for (const w of WIDGET_DEFS) {
+              const s = widgetState[w.key];
+              log(
+                `  ${w.label.padEnd(11)} x=${s.x} y=${s.y} w=${s.w} h=${s.h}`,
+              );
+            }
 
-    WIDGET_DEFS = scanWidgets(templateBytes);
-    groupState = buildGroups(templateBytes);
-    // load widget positions from template
-    for (const w of WIDGET_DEFS) {
-      widgetState[w.key] = {
-        x: readU16LE(templateBytes, xOff(w)),
-        y: readU16LE(templateBytes, yOff(w)),
-        w: readU16LE(templateBytes, wOff(w)),
-        h: readU16LE(templateBytes, hOff(w)),
-        visible: true,
-      };
-    }
-    log('Widget positions read from template:', 'ok');
-    for (const w of WIDGET_DEFS) {
-      const s = widgetState[w.key];
-      log(`  ${w.label.padEnd(11)} x=${s.x} y=${s.y} w=${s.w} h=${s.h}`);
-    }
+            setStat(
+              "stat-template",
+              `${file.name} — ${templateBytes.length} bytes, image @ 0x${off.toString(16)}`,
+              "ok",
+            );
+            buildWidgetDOM();
+            updateWidgetTable();
+            updateGroupTable();
+            refreshAll();
+            drawBackground();
+          } catch (err) {
+            console.error(err);
+            setStat("stat-template", "Error: " + err.message, "err");
+            log("Template load failed: " + err.message, "err");
+          }
+        });
 
-    setStat('stat-template', `${file.name} — ${templateBytes.length} bytes, image @ 0x${off.toString(16)}`, 'ok');
-    buildWidgetDOM();
-    updateWidgetTable();
-    updateGroupTable();
-    drawBackground();
-  } catch (err) {
-    console.error(err);
-    setStat('stat-template', 'Error: ' + err.message, 'err');
-    log('Template load failed: ' + err.message, 'err');
-  }
-});
+      // ============================================================================
+      // Photo loading -> live preview
+      // ============================================================================
+      document
+        .getElementById("f-photo")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            photoImg = await readFileAsImage(file);
+            setStat(
+              "stat-photo",
+              `${file.name} — ${photoImg.width}x${photoImg.height}`,
+              "ok",
+            );
+            log(
+              `Loaded photo ${file.name} (${photoImg.width}x${photoImg.height}).`,
+            );
+            drawBackground();
+          } catch (err) {
+            setStat("stat-photo", "Error loading image", "err");
+            log("Photo load failed: " + err.message, "err");
+          }
+        });
+      document
+        .getElementById("sel-fit")
+        .addEventListener("change", drawBackground);
 
-// ============================================================================
-// Photo loading -> live preview
-// ============================================================================
-document.getElementById('f-photo').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    photoImg = await readFileAsImage(file);
-    setStat('stat-photo', `${file.name} — ${photoImg.width}x${photoImg.height}`, 'ok');
-    log(`Loaded photo ${file.name} (${photoImg.width}x${photoImg.height}).`);
-    drawBackground();
-  } catch (err) {
-    setStat('stat-photo', 'Error loading image', 'err');
-    log('Photo load failed: ' + err.message, 'err');
-  }
-});
-document.getElementById('sel-fit').addEventListener('change', drawBackground);
+      function drawBackground() {
+        const canvas = document.getElementById("bgCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, IMG_W, IMG_H);
 
-function drawBackground() {
-  const canvas = document.getElementById('bgCanvas');
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, IMG_W, IMG_H);
+        if (photoImg) {
+          const mode = document.getElementById("sel-fit").value;
+          const fitted = fitImageToCanvas(photoImg, IMG_W, IMG_H, mode);
+          ctx.drawImage(fitted, 0, 0);
+        } else if (templateBytes) {
+          // show the template's own background image as a placeholder
+          const off = imageOffsetCached;
+          const imgData = ctx.createImageData(IMG_W, IMG_H);
+          for (let p = 0, o = off; p < IMG_W * IMG_H; p++, o += 2) {
+            const val = (templateBytes[o] << 8) | templateBytes[o + 1];
+            const r = (val >> 11) & 0x1f,
+              g = (val >> 5) & 0x3f,
+              b = val & 0x1f;
+            imgData.data[p * 4 + 0] = ((r * 255) / 31) | 0;
+            imgData.data[p * 4 + 1] = ((g * 255) / 63) | 0;
+            imgData.data[p * 4 + 2] = ((b * 255) / 31) | 0;
+            imgData.data[p * 4 + 3] = 255;
+          }
+          ctx.putImageData(imgData, 0, 0);
+        } else {
+          ctx.fillStyle = "#000";
+          ctx.fillRect(0, 0, IMG_W, IMG_H);
+        }
+      }
 
-  if (photoImg) {
-    const mode = document.getElementById('sel-fit').value;
-    const fitted = fitImageToCanvas(photoImg, IMG_W, IMG_H, mode);
-    ctx.drawImage(fitted, 0, 0);
-  } else if (templateBytes) {
-    // show the template's own background image as a placeholder
-    const off = imageOffsetCached;
-    const imgData = ctx.createImageData(IMG_W, IMG_H);
-    for (let p = 0, o = off; p < IMG_W * IMG_H; p++, o += 2) {
-      const val = (templateBytes[o] << 8) | templateBytes[o + 1];
-      const r = (val >> 11) & 0x1F, g = (val >> 5) & 0x3F, b = val & 0x1F;
-      imgData.data[p*4+0] = (r * 255 / 31) | 0;
-      imgData.data[p*4+1] = (g * 255 / 63) | 0;
-      imgData.data[p*4+2] = (b * 255 / 31) | 0;
-      imgData.data[p*4+3] = 255;
-    }
-    ctx.putImageData(imgData, 0, 0);
-  } else {
-    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, IMG_W, IMG_H);
-  }
-}
+      // ============================================================================
+      // Widget overlay DOM + dragging
+      // ============================================================================
+      const stage = document.getElementById("stage");
+      const coordread = document.getElementById("coordread");
 
-// ============================================================================
-// Widget overlay DOM + dragging
-// ============================================================================
-const stage = document.getElementById('stage');
-const coordread = document.getElementById('coordread');
+      function buildWidgetDOM() {
+        document.querySelectorAll(".widget").forEach((el) => el.remove());
+        for (const w of WIDGET_DEFS) {
+          const s = widgetState[w.key];
+          const el = document.createElement("div");
+          el.className = "widget";
+          el.id = "w-" + w.key;
+          el.dataset.key = w.key;
+          el.style.width = (s.vw || s.w) * CANVAS_SCALE + "px";
+          el.style.height = (s.vh || s.h) * CANVAS_SCALE + "px";
+          el.style.left = s.x * CANVAS_SCALE + "px";
+          el.style.top = s.y * CANVAS_SCALE + "px";
+          el.style.opacity = s.visible ? "1" : "0.3";
+          el.innerHTML = "";
+          el.style.background = "transparent";
+          el.title = w.label + (s.visible ? "" : " (hidden on watch)");
+          stage.appendChild(el);
+          attachDrag(el, w);
+        }
+        drawGlyphs();
+      }
 
-function buildWidgetDOM() {
-  document.querySelectorAll('.widget').forEach(el => el.remove());
-  for (const w of WIDGET_DEFS) {
-    const s = widgetState[w.key];
-    const el = document.createElement('div');
-    el.className = 'widget';
-    el.id = 'w-' + w.key;
-    el.dataset.key = w.key;
-    el.style.width = (s.w * CANVAS_SCALE) + 'px';
-    el.style.height = (s.h * CANVAS_SCALE) + 'px';
-    el.style.left = (s.x * CANVAS_SCALE) + 'px';
-    el.style.top = (s.y * CANVAS_SCALE) + 'px';
-    el.style.opacity = s.visible ? '1' : '0.3';
-    el.innerHTML = `<span class="ico">${w.icon}</span>`;
-    el.title = w.label + (s.visible ? '' : ' (hidden on watch)');
-    stage.appendChild(el);
-    attachDrag(el, w);
-  }
-}
+      function attachDrag(el, wdef) {
+        let dragging = false,
+          startX = 0,
+          startY = 0,
+          origLeft = 0,
+          origTop = 0;
+        el.addEventListener("pointerdown", (e) => {
+          dragging = true;
+          startX = e.clientX;
+          startY = e.clientY;
+          origLeft = parseFloat(el.style.left);
+          origTop = parseFloat(el.style.top);
+          el.setPointerCapture(e.pointerId);
+          e.preventDefault();
+        });
+        el.addEventListener("pointermove", (e) => {
+          if (!dragging) return;
+          const dx = e.clientX - startX,
+            dy = e.clientY - startY;
+          let newLeft = origLeft + dx,
+            newTop = origTop + dy;
+          const s = widgetState[wdef.key];
+          const vw = s.vw || s.w,
+            vh = s.vh || s.h;
+          let nx = Math.max(0, Math.min(newLeft / CANVAS_SCALE, IMG_W - vw)),
+            ny = Math.max(0, Math.min(newTop / CANVAS_SCALE, IMG_H - vh));
+          const sn = e.shiftKey ? null : snapPos(wdef.key, nx, ny, vw, vh);
+          if (sn) {
+            nx = sn.x;
+            ny = sn.y;
+          }
+          showGuides(sn);
+          s.x = Math.round(nx);
+          s.y = Math.round(ny);
+          el.style.left = s.x * CANVAS_SCALE + "px";
+          el.style.top = s.y * CANVAS_SCALE + "px";
+          drawGlyphs();
+          coordread.textContent = `${wdef.label}: x=${s.x} y=${s.y}`;
+          updateWidgetTable();
+        });
+        const end = (e) => {
+          dragging = false;
+          hideGuides();
+          try {
+            el.releasePointerCapture(e.pointerId);
+          } catch (_) {}
+        };
+        el.addEventListener("pointerup", end);
+        el.addEventListener("pointercancel", end);
+      }
 
-function attachDrag(el, wdef) {
-  let dragging = false, startX = 0, startY = 0, origLeft = 0, origTop = 0;
-  el.addEventListener('pointerdown', (e) => {
-    dragging = true;
-    startX = e.clientX; startY = e.clientY;
-    origLeft = parseFloat(el.style.left); origTop = parseFloat(el.style.top);
-    el.setPointerCapture(e.pointerId);
-    e.preventDefault();
-  });
-  el.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - startX, dy = e.clientY - startY;
-    let newLeft = origLeft + dx, newTop = origTop + dy;
-    const s = widgetState[wdef.key];
-    const maxLeft = (IMG_W - s.w) * CANVAS_SCALE;
-    const maxTop = (IMG_H - s.h) * CANVAS_SCALE;
-    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-    newTop = Math.max(0, Math.min(newTop, maxTop));
-    el.style.left = newLeft + 'px';
-    el.style.top = newTop + 'px';
-    s.x = Math.round(newLeft / CANVAS_SCALE);
-    s.y = Math.round(newTop / CANVAS_SCALE);
-    coordread.textContent = `${wdef.label}: x=${s.x} y=${s.y}`;
-    updateWidgetTable();
-  });
-  const end = (e) => { dragging = false; try{el.releasePointerCapture(e.pointerId);}catch(_){} };
-  el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', end);
-}
+      function updateWidgetTable() {
+        const tbody = document.querySelector("#wtable tbody");
+        tbody.innerHTML = "";
+        for (const w of WIDGET_DEFS) {
+          const s = widgetState[w.key];
+          if (!s) continue;
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            `<td><input type="checkbox" class="vis-check" data-key="${w.key}" ${s.visible ? "checked" : ""}></td>` +
+            `<td>${w.icon} <input type="text" class="label-edit" data-key="${w.key}" value="${w.label}" style="width:120px">${w.guessed ? ' <span class="hint" title="Recognised layout, not read from the file — rename if wrong">(guessed)</span>' : ""}</td>` +
+            `<td class="num">${s.x}</td><td class="num">${s.y}</td>` +
+            `<td class="num">0x${xOff(w).toString(16).toUpperCase()}</td>`;
+          tbody.appendChild(tr);
+        }
+        tbody.querySelectorAll(".label-edit").forEach((inp) => {
+          inp.addEventListener("change", () => {
+            const w = WIDGET_DEFS.find((w) => w.key === inp.dataset.key);
+            w.label = inp.value.trim() || w.label;
+            delete w.guessed;
+            updateGroupTable();
+          });
+        });
+        tbody.querySelectorAll(".vis-check").forEach((cb) => {
+          cb.addEventListener("change", () => {
+            const key = cb.dataset.key;
+            const s = widgetState[key];
+            s.visible = cb.checked;
+            buildWidgetDOM();
+            const w = WIDGET_DEFS.find((w) => w.key === key);
+            log(
+              `${w.label}: ${s.visible ? "shown" : "hidden"} (position kept, moved off-canvas on export when hidden).`,
+            );
+          });
+        });
+      }
 
-function updateWidgetTable() {
-  const tbody = document.querySelector('#wtable tbody');
-  tbody.innerHTML = '';
-  for (const w of WIDGET_DEFS) {
-    const s = widgetState[w.key];
-    if (!s) continue;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input type="checkbox" class="vis-check" data-key="${w.key}" ${s.visible ? 'checked' : ''}></td>` +
-                    `<td>${w.icon} ${w.label}</td><td class="num">${s.x}</td><td class="num">${s.y}</td>` +
-                    `<td class="num">0x${xOff(w).toString(16).toUpperCase()}</td>`;
-    tbody.appendChild(tr);
-  }
-  tbody.querySelectorAll('.vis-check').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const key = cb.dataset.key;
-      const s = widgetState[key];
-      s.visible = cb.checked;
-      buildWidgetDOM();
-      const w = WIDGET_DEFS.find(w => w.key === key);
-      log(`${w.label}: ${s.visible ? 'shown' : 'hidden'} (position kept, moved off-canvas on export when hidden).`);
-    });
-  });
-}
+      document
+        .getElementById("btn-reset-positions")
+        .addEventListener("click", () => {
+          if (!templateBytes) return;
+          for (const w of WIDGET_DEFS) {
+            const prevVisible = widgetState[w.key]
+              ? widgetState[w.key].visible
+              : true;
+            widgetState[w.key] = {
+              x: readU16LE(templateBytes, xOff(w)),
+              y: readU16LE(templateBytes, yOff(w)),
+              w: readU16LE(templateBytes, wOff(w)),
+              h: readU16LE(templateBytes, hOff(w)),
+              visible: prevVisible,
+            };
+          }
+          refreshAll();
+          log(
+            "Widget positions reset to template defaults (show/hide kept as-is).",
+          );
+        });
 
-document.getElementById('btn-reset-positions').addEventListener('click', () => {
-  if (!templateBytes) return;
-  for (const w of WIDGET_DEFS) {
-    const prevVisible = widgetState[w.key] ? widgetState[w.key].visible : true;
-    widgetState[w.key] = {
-      x: readU16LE(templateBytes, xOff(w)),
-      y: readU16LE(templateBytes, yOff(w)),
-      w: readU16LE(templateBytes, wOff(w)),
-      h: readU16LE(templateBytes, hOff(w)),
-      visible: prevVisible,
-    };
-  }
-  buildWidgetDOM();
-  updateWidgetTable();
-  log('Widget positions reset to template defaults (show/hide kept as-is).');
-});
+      // ============================================================================
+      // Pre/post AT command files — load + localStorage cache
+      // ============================================================================
+      function cachePreview(hexArr) {
+        return (
+          hexArr.length +
+          " line(s), first: " +
+          (hexArr[0] ? hexArr[0].slice(0, 24) + "..." : "(none)")
+        );
+      }
+      document.getElementById("f-pre").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const text = await readFileAsText(file);
+        preHex = parseHexLines(text);
+        localStorage.setItem("fs1_pre_hex", JSON.stringify(preHex));
+        setStat("stat-pre", `${file.name} — ${cachePreview(preHex)}`, "ok");
+        log(`Loaded pre-commands: ${preHex.length} lines.`);
+      });
+      document
+        .getElementById("f-post")
+        .addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const text = await readFileAsText(file);
+          postHex = parseHexLines(text);
+          localStorage.setItem("fs1_post_hex", JSON.stringify(postHex));
+          setStat("stat-post", `${file.name} — ${cachePreview(postHex)}`, "ok");
+          log(`Loaded post-commands: ${postHex.length} lines.`);
+        });
+      document
+        .getElementById("btn-clear-cache")
+        .addEventListener("click", () => {
+          localStorage.removeItem("fs1_pre_hex");
+          localStorage.removeItem("fs1_post_hex");
+          preHex = [];
+          postHex = [];
+          setStat(
+            "stat-pre",
+            "Not loaded — remembers last file via this browser.",
+            "",
+          );
+          setStat(
+            "stat-post",
+            "Not loaded — remembers last file via this browser.",
+            "",
+          );
+          log("Cleared remembered pre/post command files.");
+        });
+      (function restoreCache() {
+        try {
+          const p = localStorage.getItem("fs1_pre_hex");
+          const q = localStorage.getItem("fs1_post_hex");
+          if (p) {
+            preHex = JSON.parse(p);
+            setStat("stat-pre", `(remembered) ${cachePreview(preHex)}`, "ok");
+          }
+          if (q) {
+            postHex = JSON.parse(q);
+            setStat("stat-post", `(remembered) ${cachePreview(postHex)}`, "ok");
+          }
+        } catch (_) {}
+      })();
 
-// ============================================================================
-// Pre/post AT command files — load + localStorage cache
-// ============================================================================
-function cachePreview(hexArr) {
-  return hexArr.length + ' line(s), first: ' + (hexArr[0] ? hexArr[0].slice(0, 24) + '...' : '(none)');
-}
-document.getElementById('f-pre').addEventListener('change', async (e) => {
-  const file = e.target.files[0]; if (!file) return;
-  const text = await readFileAsText(file);
-  preHex = parseHexLines(text);
-  localStorage.setItem('fs1_pre_hex', JSON.stringify(preHex));
-  setStat('stat-pre', `${file.name} — ${cachePreview(preHex)}`, 'ok');
-  log(`Loaded pre-commands: ${preHex.length} lines.`);
-});
-document.getElementById('f-post').addEventListener('change', async (e) => {
-  const file = e.target.files[0]; if (!file) return;
-  const text = await readFileAsText(file);
-  postHex = parseHexLines(text);
-  localStorage.setItem('fs1_post_hex', JSON.stringify(postHex));
-  setStat('stat-post', `${file.name} — ${cachePreview(postHex)}`, 'ok');
-  log(`Loaded post-commands: ${postHex.length} lines.`);
-});
-document.getElementById('btn-clear-cache').addEventListener('click', () => {
-  localStorage.removeItem('fs1_pre_hex');
-  localStorage.removeItem('fs1_post_hex');
-  preHex = []; postHex = [];
-  setStat('stat-pre', 'Not loaded — remembers last file via this browser.', '');
-  setStat('stat-post', 'Not loaded — remembers last file via this browser.', '');
-  log('Cleared remembered pre/post command files.');
-});
-(function restoreCache() {
-  try {
-    const p = localStorage.getItem('fs1_pre_hex');
-    const q = localStorage.getItem('fs1_post_hex');
-    if (p) { preHex = JSON.parse(p); setStat('stat-pre', `(remembered) ${cachePreview(preHex)}`, 'ok'); }
-    if (q) { postHex = JSON.parse(q); setStat('stat-post', `(remembered) ${cachePreview(postHex)}`, 'ok'); }
-  } catch (_) {}
-})();
+      // ============================================================================
+      // Glyph images: colors & fonts (decoded format, see README). Directory @0xA40 (u32 LE,
+      // +0xA00), count @0xA0C, images = row-offset table + RLE rows: [n][r] + n*u16BE,
+      // each value repeated r times. Transparent key colour = u16 LE at widget record +0x36.
+      // ============================================================================
+      const DIR_OFF = 0xa40,
+        CNT_OFF = 0xa0c;
+      function readU32(b, o) {
+        return (
+          (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0
+        );
+      }
+      function writeU32(b, o, v) {
+        b[o] = v & 255;
+        b[o + 1] = (v >>> 8) & 255;
+        b[o + 2] = (v >>> 16) & 255;
+        b[o + 3] = (v >>> 24) & 255;
+      }
+      function unpack565(v) {
+        return [
+          (((v >> 11) & 31) * 255) / 31,
+          (((v >> 5) & 63) * 255) / 63,
+          ((v & 31) * 255) / 31,
+        ];
+      }
+      function pack565(c) {
+        const q = (x) => Math.max(0, Math.min(255, Math.round(x)));
+        return ((q(c[0]) >> 3) << 11) | ((q(c[1]) >> 2) << 5) | (q(c[2]) >> 3);
+      }
+      function hex2rgb(h) {
+        return [1, 3, 5].map((i) => parseInt(h.substr(i, 2), 16));
+      }
+      function rgb2hex(c) {
+        return (
+          "#" +
+          c.map((x) => Math.round(x).toString(16).padStart(2, "0")).join("")
+        );
+      }
+      const lum = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
 
-// ============================================================================
-// Glyph images: colors & fonts (decoded format, see README). Directory @0xA40 (u32 LE,
-// +0xA00), count @0xA0C, images = row-offset table + RLE rows: [n][r] + n*u16BE,
-// each value repeated r times. Transparent key colour = u16 LE at widget record +0x36.
-// ============================================================================
-const DIR_OFF = 0xA40, CNT_OFF = 0xA0C;
-function readU32(b,o){ return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0; }
-function writeU32(b,o,v){ b[o]=v&255; b[o+1]=(v>>>8)&255; b[o+2]=(v>>>16)&255; b[o+3]=(v>>>24)&255; }
-function unpack565(v){ return [((v>>11)&31)*255/31, ((v>>5)&63)*255/63, (v&31)*255/31]; }
-function pack565(c){ const q=x=>Math.max(0,Math.min(255,Math.round(x)));
-  return ((q(c[0])>>3)<<11)|((q(c[1])>>2)<<5)|(q(c[2])>>3); }
-function hex2rgb(h){ return [1,3,5].map(i=>parseInt(h.substr(i,2),16)); }
-function rgb2hex(c){ return '#'+c.map(x=>Math.round(x).toString(16).padStart(2,'0')).join(''); }
-const lum = c => 0.299*c[0]+0.587*c[1]+0.114*c[2];
+      // Confirmed by cross-referencing widget X/Y quadrant + adjacent background icon against a real
+      // capture (the "goof" face): [dirIdx, kind] fingerprint -> friendly labels, in widget order.
+      // This is one confirmed example, not a general rule for what idx/kind combinations always mean -
+      // unrecognised faces fall back to the generic guesser below, and every label is editable either way.
+      const KNOWN_FACES = [
+        {
+          name: "goof-style (10 widgets)",
+          fp: [
+            [2, 4],
+            [2, 4],
+            [12, 1],
+            [26, 1],
+            [28, 4],
+            [38, 1],
+            [39, 4],
+            [39, 4],
+            [39, 4],
+            [39, 4],
+          ],
+          labels: [
+            ["Hours", "🕐"],
+            ["Minutes", "🕐"],
+            ["Weekday", "📅"],
+            ["AM/PM", "🌗"],
+            ["Battery %", "🔋"],
+            ["Battery '%' sign", "🔋"],
+            ["Steps", "👣"],
+            ["Day of month", "🗓️"],
+            ["Heart Rate (BPM)", "❤️"],
+            ["Distance", "📍"],
+          ],
+        },
+      ];
 
-function scanWidgets(d){
-  const out=[];
-  for(let base=0x630; base<0x900; base+=0x30){
-    if(!readU16LE(d,base+0x14) && !readU16LE(d,base+0x16)) break;
-    out.push({base});
-  }
-  const std=['hours','minutes','battery','steps','calories','heartrate'];
-  if(out.length===6) return WIDGET_DEFS_DEFAULT.map(w=>({...w}));
-  return out.map((w,i)=>({ key:'w'+i, base:w.base, icon:'▣',
-    label: i===0?'Hours': i===1?'Minutes':`Widget ${i+1} (${readU16LE(d,w.base+0x14)}×${readU16LE(d,w.base+0x16)})` }));
-}
+      function scanWidgets(d) {
+        const out = [];
+        for (let base = 0x630; base < 0x900; base += 0x30) {
+          if (!readU16LE(d, base + 0x14) && !readU16LE(d, base + 0x16)) break;
+          out.push({ base });
+        }
+        if (out.length === 6) return WIDGET_DEFS_DEFAULT.map((w) => ({ ...w }));
 
-function parseImages(d){
-  const cnt=readU32(d,CNT_OFF), imgs=[];
-  for(let i=2;i<cnt;i++){
-    const p=readU32(d,DIR_OFF+4*i)+RES_BASE, H=readU32(d,p)/4, offs=[];
-    for(let j=0;j<H;j++) offs.push(readU32(d,p+4*j));
-    const rows=[]; let W=0, q=0;
-    for(let j=0;j<H;j++){
-      q=p+offs[j]; const end=j+1<H?p+offs[j+1]:1e12; let px=0; const rec=[];
-      while(q<end && (j+1<H || px<W)){ const n=d[q], r=d[q+1]; rec.push([q,n,r]); q+=2+2*n; px+=n*r; }
-      if(j===0) W=px; rows.push(rec);
-    }
-    imgs.push({idx:i,p,W,H,size:q-p,rows});
-  }
-  return imgs;
-}
+        const fp = out.map((w) => [d[w.base + 0x18], d[w.base + 0x1c]]);
+        const known = KNOWN_FACES.find(
+          (k) =>
+            k.fp.length === fp.length &&
+            k.fp.every((p, i) => p[0] === fp[i][0] && p[1] === fp[i][1]),
+        );
+        if (known) {
+          log(
+            `Recognised widget layout: ${known.name}. Labels below are a confirmed guess, not read from the file - rename any that look wrong.`,
+            "warn",
+          );
+          return out.map((w, i) => ({
+            key: "w" + i,
+            base: w.base,
+            icon: known.labels[i][1],
+            label: known.labels[i][0],
+            guessed: true,
+          }));
+        }
 
-// Widget -> image group (consecutive images of the same size, starting at the widget's index)
-function buildGroups(d){
-  const imgs=parseImages(d), groups={};
-  for(const w of WIDGET_DEFS){
-    const idx=d[w.base+0x18], key=readU16LE(d,w.base+0x36), first=imgs[idx-2];
-    if(!first) continue;
-    const g=groups[idx]||(groups[idx]={idx,key,kind:d[w.base+0x1C],members:[],imgs:[]});
-    g.members.push(w.label);
-    if(!g.imgs.length) for(let k=idx-2;k<imgs.length&&imgs[k].W===first.W&&imgs[k].H===first.H;k++) g.imgs.push(imgs[k]);
-  }
-  for(const g of Object.values(groups)){   // dominant non-key colour
-    const hist={};
-    for(const im of g.imgs) for(const row of im.rows) for(const [q,n,r] of row) for(let k=0;k<n;k++){
-      const v=(d[q+2+2*k]<<8)|d[q+3+2*k]; if(v!==g.key) hist[v]=(hist[v]||0)+r; }
-    g.main=+Object.keys(hist).sort((a,b)=>hist[b]-hist[a])[0]||0xFFFF;
-    g.orig=rgb2hex(unpack565(g.main)); g.color=g.orig; g.font='';
-  }
-  return groups;
-}
+        // Generic fallback: use kind + how many images share the widget's directory slot to guess
+        // what KIND of thing it is (a rendered number vs. a picked-from-a-list icon), and position for
+        // roughly WHERE - then let the person rename it. Not a confirmed mapping like the table above.
+        const imgs = parseImages(d);
+        const groupLen = (idx) => {
+          const first = imgs[idx - 2];
+          if (!first) return 0;
+          let n = 0;
+          for (
+            let k = idx - 2;
+            k < imgs.length && imgs[k].W === first.W && imgs[k].H === first.H;
+            k++
+          )
+            n++;
+          return n;
+        };
+        const quad = (x, y) =>
+          (y < IMG_H / 2 ? "top" : "bottom") +
+          "-" +
+          (x < IMG_W / 2 ? "left" : "right");
+        const seen = {};
+        const labelled = out.map((w) => {
+          const idx = d[w.base + 0x18],
+            kind = d[w.base + 0x1c],
+            x = readU16LE(d, w.base + 0xc),
+            y = readU16LE(d, w.base + 0xe),
+            n = groupLen(idx);
+          let label,
+            icon = "▣";
+          if (kind === 1 && n === 14) {
+            label = "Weekday";
+            icon = "📅";
+          } else if (kind === 1 && n === 2) {
+            label = "AM/PM";
+            icon = "🌗";
+          } else if (kind === 1 && n === 1) {
+            label = "Icon/suffix (unknown)";
+          } else if (kind === 4) {
+            const q = quad(x, y);
+            seen[q] = (seen[q] || 0) + 1;
+            label = `Number (${q}${seen[q] > 1 ? " #" + seen[q] : ""})`;
+          } else
+            label = `Widget (${readU16LE(d, w.base + 0x14)}×${readU16LE(d, w.base + 0x16)})`;
+          return {
+            key: "w" + out.indexOf(w),
+            base: w.base,
+            icon,
+            label,
+            x,
+            y,
+            kind,
+          };
+        });
+        // A kind=1, single-image widget sharing its (x,y) with a kind=4 number is almost always that
+        // number's suffix/unit glyph (e.g. a fixed '%' sign next to a battery-percentage readout).
+        labelled.forEach((w) => {
+          if (w.label !== "Icon/suffix (unknown)") return;
+          const sib = labelled.find(
+            (o) =>
+              o !== w &&
+              o.kind === 4 &&
+              d[o.base + 0xc] === d[w.base + 0xc] &&
+              o.x === readU16LE(d, w.base + 0xc) &&
+              o.y === readU16LE(d, w.base + 0xe),
+          );
+          if (sib) w.label = `${sib.label} suffix`;
+        });
+        return labelled.map(({ key, base, icon, label }) => ({
+          key,
+          base,
+          icon,
+          label,
+        }));
+      }
 
-function recolorGroup(buf,g){
-  const N=hex2rgb(g.color), lM=lum(unpack565(g.main));
-  for(const im of g.imgs) for(const row of im.rows) for(const [q,n] of row) for(let k=0;k<n;k++){
-    const o=q+2+2*k, v=(buf[o]<<8)|buf[o+1]; if(v===g.key) continue;
-    const t=lum(unpack565(v))/lM; let nv=pack565(N.map(x=>x*t));
-    if(nv===g.key) nv^=1; buf[o]=nv>>8; buf[o+1]=nv&255;
-  }
-}
+      function parseImages(d) {
+        const cnt = readU32(d, CNT_OFF),
+          imgs = [];
+        for (let i = 2; i < cnt; i++) {
+          const p = readU32(d, DIR_OFF + 4 * i) + RES_BASE,
+            H = readU32(d, p) / 4,
+            offs = [];
+          for (let j = 0; j < H; j++) offs.push(readU32(d, p + 4 * j));
+          const rows = [];
+          let W = 0,
+            q = 0;
+          for (let j = 0; j < H; j++) {
+            q = p + offs[j];
+            const end = j + 1 < H ? p + offs[j + 1] : 1e12;
+            let px = 0;
+            const rec = [];
+            while (q < end && (j + 1 < H || px < W)) {
+              const n = d[q],
+                r = d[q + 1];
+              rec.push([q, n, r]);
+              q += 2 + 2 * n;
+              px += n * r;
+            }
+            if (j === 0) W = px;
+            rows.push(rec);
+          }
+          imgs.push({ idx: i, p, W, H, size: q - p, rows });
+        }
+        return imgs;
+      }
 
-// ---- experimental: render digits from a browser font and RLE-encode them ----
-function glyphPixels(g,font,colorHex){
-  const {W,H}=g.imgs[0], chars=('0123456789./-:').slice(0,g.imgs.length), fg=hex2rgb(colorHex);
-  const c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d',{willReadFrequently:true});
-  const fam=`"${font}", sans-serif`; x.font=`100px ${fam}`;
-  const m=x.measureText('8'), h100=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
-  let size=100*H*0.9/h100; x.font=`${size}px ${fam}`;
-  const wmax=Math.max(...[...'0123456789'].map(ch=>x.measureText(ch).width));
-  if(wmax>W*0.96){ size*=W*0.96/wmax; x.font=`${size}px ${fam}`; }
-  const m2=x.measureText('8'), base=(H+m2.actualBoundingBoxAscent-m2.actualBoundingBoxDescent)/2;
-  x.textAlign='center'; x.fillStyle='#fff';
-  return [...chars].map(ch=>{
-    x.clearRect(0,0,W,H); x.fillText(ch,W/2,base);
-    const a=x.getImageData(0,0,W,H).data, px=new Uint16Array(W*H);
-    for(let i=0;i<W*H;i++){ const al=a[i*4+3]; let v=g.key;
-      if(al>=64){ v=pack565(fg.map(f=>f*al/255)); if(v===g.key) v^=1; } px[i]=v; }
-    return px;
-  });
-}
-function encodeImage(px,W,H){
-  const rows=[]; for(let y=0;y<H;y++){ const r=[]; let i=0;
-    while(i<W){ let j=i; while(j<W&&j-i<255&&px[y*W+j]===px[y*W+i]) j++; r.push(1,j-i,px[y*W+i]>>8,px[y*W+i]&255); i=j; }
-    rows.push(r); }
-  const out=[]; let off=4*H; const tbl=new Uint8Array(4*H);
-  rows.forEach((r,y)=>{ writeU32(tbl,4*y,off); off+=r.length; });
-  return concatBytes([tbl,...rows.map(r=>new Uint8Array(r))]);
-}
+      // Widget -> image group (consecutive images of the same size, starting at the widget's index)
+      function buildGroups(d) {
+        const imgs = parseImages(d),
+          groups = {};
+        for (const w of WIDGET_DEFS) {
+          const idx = d[w.base + 0x18],
+            key = readU16LE(d, w.base + 0x36),
+            first = imgs[idx - 2];
+          if (!first) continue;
+          const g =
+            groups[idx] ||
+            (groups[idx] = {
+              idx,
+              key,
+              kind: d[w.base + 0x1c],
+              members: [],
+              wkeys: [],
+              imgs: [],
+            });
+          g.members.push(w.label);
+          g.wkeys.push(w.key);
+          if (!g.imgs.length)
+            for (
+              let k = idx - 2;
+              k < imgs.length && imgs[k].W === first.W && imgs[k].H === first.H;
+              k++
+            )
+              g.imgs.push(imgs[k]);
+        }
+        for (const g of Object.values(groups)) {
+          // dominant non-key colour
+          const hist = {};
+          g.W = g.imgs[0].W;
+          g.H = g.imgs[0].H;
+          for (const im of g.imgs)
+            for (const row of im.rows)
+              for (const [q, n, r] of row)
+                for (let k = 0; k < n; k++) {
+                  const v = (d[q + 2 + 2 * k] << 8) | d[q + 3 + 2 * k];
+                  if (v !== g.key) hist[v] = (hist[v] || 0) + r;
+                }
+          g.main =
+            +Object.keys(hist).sort((a, b) => hist[b] - hist[a])[0] || 0xffff;
+          g.orig = rgb2hex(unpack565(g.main));
+          g.color = g.orig;
+          g.font = "";
+        }
+        return groups;
+      }
 
-// Rebuild the image tail after some images were replaced; fix directory + size fields.
-function rebuildImages(buf,repl){
-  const imgs=parseImages(buf), cnt=readU32(buf,CNT_OFF), first=imgs[0].p, last=imgs[imgs.length-1];
-  const parts=[]; let pos=first;
-  imgs.forEach(im=>{ const data=repl.get(im.idx)||buf.slice(im.p,im.p+im.size);
-    writeU32(buf,DIR_OFF+4*im.idx,pos-RES_BASE); parts.push(data); pos+=data.length; });
-  const out=concatBytes([buf.slice(0,first),...parts,buf.slice(last.p+last.size)]);
-  const t=out.length; [0x32,0x42].forEach(o=>writeU32(out,o,t-0x200)); writeU32(out,0x208,t-0x600);
-  writeU32(out,0xA38,t-(DIR_OFF+4*(cnt+4)));
-  return out;
-}
+      function decodePx(d, im) {
+        const out = new Uint16Array(im.W * im.H);
+        let o = 0;
+        for (const row of im.rows)
+          for (const [q, n, r] of row)
+            for (let k = 0; k < n; k++) {
+              const v = (d[q + 2 + 2 * k] << 8) | d[q + 3 + 2 * k];
+              for (let j = 0; j < r; j++) out[o++] = v;
+            }
+        return out;
+      }
+      function tintPx(px, g, hex) {
+        const N = hex2rgb(hex),
+          lM = lum(unpack565(g.main));
+        return px.map((v) => {
+          if (v === g.key) return v;
+          const t = lum(unpack565(v)) / lM;
+          const nv = pack565(N.map((x) => x * t));
+          return nv === g.key ? nv ^ 1 : nv;
+        });
+      }
+      function scalePx(px, g, W, H) {
+        const a = document.createElement("canvas");
+        a.width = g.W;
+        a.height = g.H;
+        const ax = a.getContext("2d"),
+          id = ax.createImageData(g.W, g.H);
+        px.forEach((v, k) => {
+          const c = unpack565(v);
+          id.data.set(
+            v === g.key ? [0, 0, 0, 0] : [c[0], c[1], c[2], 255],
+            k * 4,
+          );
+        });
+        ax.putImageData(id, 0, 0);
+        const b = document.createElement("canvas");
+        b.width = W;
+        b.height = H;
+        const bx = b.getContext("2d", { willReadFrequently: true });
+        bx.imageSmoothingQuality = "high";
+        bx.drawImage(a, 0, 0, W, H);
+        const d = bx.getImageData(0, 0, W, H).data,
+          out = new Uint16Array(W * H);
+        for (let i = 0; i < W * H; i++) {
+          if (d[i * 4 + 3] < 128) {
+            out[i] = g.key;
+            continue;
+          }
+          const v = pack565([d[i * 4], d[i * 4 + 1], d[i * 4 + 2]]);
+          out[i] = v === g.key ? v ^ 1 : v;
+        }
+        return out;
+      }
 
-function applyGroupEdits(buf){
-  const repl=new Map();
-  for(const g of Object.values(groupState)){
-    if(g.font){
-      const px=glyphPixels(g,g.font,g.color), {W,H}=g.imgs[0];
-      g.imgs.forEach((im,i)=>repl.set(im.idx,encodeImage(px[i],W,H)));
-      log(`${g.members.join('+')}: font "${g.font}" rendered (${g.imgs.length} glyphs, ${W}x${H}).`,'warn');
-    } else if(g.color!==g.orig){ recolorGroup(buf,g); log(`${g.members.join('+')}: recoloured ${g.orig} -> ${g.color}.`); }
-  }
-  return repl.size ? rebuildImages(buf,repl) : buf;
-}
+      // ---- experimental: render digits from a browser font and RLE-encode them ----
+      function glyphPixels(g, font, colorHex, W, H) {
+        const chars = "0123456789./-:".slice(0, g.imgs.length),
+          fg = hex2rgb(colorHex);
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const x = c.getContext("2d", { willReadFrequently: true });
+        const fam = `"${font}", sans-serif`;
+        x.font = `100px ${fam}`;
+        const m = x.measureText("8"),
+          h100 = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+        let size = (100 * H * 0.9) / h100;
+        x.font = `${size}px ${fam}`;
+        const wmax = Math.max(
+          ...[..."0123456789"].map((ch) => x.measureText(ch).width),
+        );
+        if (wmax > W * 0.96) {
+          size *= (W * 0.96) / wmax;
+          x.font = `${size}px ${fam}`;
+        }
+        const m2 = x.measureText("8"),
+          base =
+            (H + m2.actualBoundingBoxAscent - m2.actualBoundingBoxDescent) / 2;
+        x.textAlign = "center";
+        x.fillStyle = "#fff";
+        return [...chars].map((ch) => {
+          x.clearRect(0, 0, W, H);
+          x.fillText(ch, W / 2, base);
+          const a = x.getImageData(0, 0, W, H).data,
+            px = new Uint16Array(W * H);
+          for (let i = 0; i < W * H; i++) {
+            const al = a[i * 4 + 3];
+            let v = g.key;
+            if (al >= 64) {
+              v = pack565(fg.map((f) => (f * al) / 255));
+              if (v === g.key) v ^= 1;
+            }
+            px[i] = v;
+          }
+          return px;
+        });
+      }
+      function encodeImage(px, W, H) {
+        const rows = [];
+        for (let y = 0; y < H; y++) {
+          const r = [];
+          let i = 0;
+          while (i < W) {
+            let j = i;
+            while (j < W && j - i < 255 && px[y * W + j] === px[y * W + i]) j++;
+            r.push(1, j - i, px[y * W + i] >> 8, px[y * W + i] & 255);
+            i = j;
+          }
+          rows.push(r);
+        }
+        const out = [];
+        let off = 4 * H;
+        const tbl = new Uint8Array(4 * H);
+        rows.forEach((r, y) => {
+          writeU32(tbl, 4 * y, off);
+          off += r.length;
+        });
+        return concatBytes([tbl, ...rows.map((r) => new Uint8Array(r))]);
+      }
 
-let groupState = {};
-const FONTS=['Arial','Impact','Georgia','Courier New','Verdana','Trebuchet MS','Times New Roman','Comic Sans MS','Arial Black','monospace'];
-function updateGroupTable(){
-  const box=document.getElementById('gtable'); box.innerHTML='';
-  if(!templateBytes) return;
-  for(const g of Object.values(groupState)){
-    const {W,H}=g.imgs[0], digits=g.kind===4 && g.imgs.length>=10;
-    const row=document.createElement('div'); row.className='grow';
-    row.innerHTML=`<div><b>${g.members.join(' + ')}</b> <span class="hint">${W}×${H} ×${g.imgs.length}</span></div>
-      <input type="color" value="${g.color}">
-      ${digits?`<input type="text" list="fontlist" placeholder="font (optional)" value="${g.font}" style="width:130px">`:''}
-      <canvas width="${digits?g.imgs.length*(W+2):1}" height="${digits?H:1}" style="max-width:100%;background:#222"></canvas>`;
-    box.appendChild(row);
-    const [col,fnt]=row.querySelectorAll('input'), cv=row.querySelector('canvas');
-    const draw=()=>{ if(!digits||!g.font) return; try{ const px=glyphPixels(g,g.font,g.color), cx=cv.getContext('2d');
-        cx.clearRect(0,0,cv.width,cv.height);
-        px.forEach((p,i)=>{ const id=cx.createImageData(W,H); p.forEach((v,k)=>{ if(v===g.key) return; const c=unpack565(v);
-          id.data.set([c[0],c[1],c[2],255],k*4); }); cx.putImageData(id,i*(W+2),0); }); }catch(e){ log('font preview: '+e.message,'err'); } };
-    col.addEventListener('input',()=>{ g.color=col.value; draw(); });
-    if(fnt) fnt.addEventListener('change',()=>{ g.font=fnt.value.trim(); draw(); });
-  }
-}
+      // Rebuild the image tail. `repl`: dirIdx -> new bytes. `extra`: brand-new images appended
+      // to the directory (dir grows by 4*extra.length bytes; everything after the directory shifts).
+      function rebuildImages(buf, repl, extra = []) {
+        const imgs = parseImages(buf),
+          cnt = readU32(buf, CNT_OFF),
+          k = extra.length,
+          sh = 4 * k,
+          first = imgs[0].p,
+          last = imgs[imgs.length - 1];
+        const dirEnd = DIR_OFF + 4 * cnt,
+          parts = [],
+          dir = [];
+        let pos = first + sh;
+        imgs.forEach((im) => {
+          const data = repl.get(im.idx) || buf.slice(im.p, im.p + im.size);
+          dir[im.idx] = pos - RES_BASE;
+          parts.push(data);
+          pos += data.length;
+        });
+        extra.forEach((data, j) => {
+          dir[cnt + j] = pos - RES_BASE;
+          parts.push(data);
+          pos += data.length;
+        });
+        const out = concatBytes([
+          buf.slice(0, dirEnd),
+          new Uint8Array(sh),
+          buf.slice(dirEnd, first),
+          ...parts,
+          buf.slice(last.p + last.size),
+        ]);
+        if (sh) {
+          writeU32(out, DIR_OFF, readU32(out, DIR_OFF) + sh);
+          writeU32(out, DIR_OFF + 4, readU32(out, DIR_OFF + 4) + sh);
+          writeU32(out, CNT_OFF, cnt + k);
+        }
+        dir.forEach((v, i) => writeU32(out, DIR_OFF + 4 * i, v));
+        const t = out.length;
+        [0x32, 0x42].forEach((o) => writeU32(out, o, t - 0x200));
+        writeU32(out, 0x208, t - 0x600);
+        writeU32(out, 0xa38, t - (DIR_OFF + 4 * (cnt + k + 4)));
+        return out;
+      }
 
-// ============================================================================
-// Export
-// ============================================================================
-function downloadBlob(filename, blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 200);
-}
+      // ---- sets: one per shared image group, or one per widget that "owns" a private copy ----
+      let groups = {},
+        sets = {},
+        wset = {};
+      function initSets() {
+        groups = buildGroups(templateBytes);
+        sets = {};
+        wset = {};
+        for (const g of Object.values(groups))
+          g.px = g.imgs.map((im) => decodePx(templateBytes, im));
+        for (const w of WIDGET_DEFS) {
+          const idx = templateBytes[w.base + 0x18],
+            g = groups[idx];
+          if (!g) continue;
+          wset[w.key] = String(idx);
+          if (!sets[idx]) sets[idx] = { idx, color: g.orig, font: "", H: g.H };
+        }
+      }
+      function setPixels(s) {
+        const g = groups[s.idx],
+          H = s.H,
+          W = Math.max(1, Math.round((g.W * H) / g.H));
+        if (s.font) return { W, H, px: glyphPixels(g, s.font, s.color, W, H) };
+        let px = g.px;
+        if (s.color !== g.orig) px = px.map((p) => tintPx(p, g, s.color));
+        if (H !== g.H) px = px.map((p) => scalePx(p, g, W, H));
+        return { W, H, px };
+      }
+      function getPx(s) {
+        const k = s.color + "|" + s.font + "|" + s.H;
+        if (s._k !== k) {
+          s._v = setPixels(s);
+          s._k = k;
+        }
+        return s._v;
+      }
 
-function buildPatchedBin() {
-  if (!templateBytes) throw new Error('Load a template (clean2.bin) first.');
-  let patched = new Uint8Array(templateBytes); // copy
+      function applyGroupEdits(buf) {
+        const repl = new Map(),
+          extra = [],
+          cnt = readU32(buf, CNT_OFF),
+          newIdx = {};
+        for (const [sid, s] of Object.entries(sets)) {
+          const g = groups[s.idx],
+            own = sid.includes(":");
+          if (!own && s.color === g.orig && !s.font && s.H === g.H) continue;
+          const P = getPx(s),
+            enc = P.px.map((p) => encodeImage(p, P.W, P.H));
+          if (own) {
+            newIdx[sid] = cnt + extra.length;
+            extra.push(...enc);
+          } else g.imgs.forEach((im, i) => repl.set(im.idx, enc[i]));
+          log(
+            `${own ? "own set for " + sid.split(":")[1] : g.members.join("+")}: ${s.font ? 'font "' + s.font + '", ' : ""}${s.color}, ${P.W}x${P.H}${own ? " (new images appended)" : ""}.`,
+            "warn",
+          );
+        }
+        for (const w of WIDGET_DEFS) {
+          const sid = wset[w.key];
+          if (!sid) continue;
+          const P = getPx(sets[sid]);
+          writeU16LE(buf, wOff(w), P.W);
+          writeU16LE(buf, hOff(w), P.H);
+          if (newIdx[sid] !== undefined) buf[w.base + 0x18] = newIdx[sid];
+        }
+        return repl.size || extra.length
+          ? rebuildImages(buf, repl, extra)
+          : buf;
+      }
 
-  if (photoImg) {
-    const mode = document.getElementById('sel-fit').value;
-    const fitted = fitImageToCanvas(photoImg, IMG_W, IMG_H, mode);
-    const raw = toRGB565BE(fitted);
-    const off = imageOffsetCached;
-    if (raw.length !== IMG_W * IMG_H * 2) throw new Error('unexpected image byte length');
-    patched.set(raw, off);
-    log(`Wrote ${raw.length} image bytes at 0x${off.toString(16)}.`);
-  } else {
-    log('No photo loaded — background left as template default.', 'warn');
-  }
+      // ---- live preview: real glyphs at real positions ----
+      function sampleIdx(i, g) {
+        if (!(g.kind === 4 && g.imgs.length >= 10))
+          return [Math.floor(g.imgs.length / 2)];
+        const d = new Date(),
+          p = (n) => String(n).padStart(2, "0");
+        return [
+          ...(i === 0
+            ? p(d.getHours() % 12 || 12)
+            : i === 1
+              ? p(d.getMinutes())
+              : "1034"),
+        ].map(Number);
+      }
+      function refreshAll() {
+        if (!templateBytes) return;
+        WIDGET_DEFS.forEach((w, i) => {
+          const s = widgetState[w.key],
+            sid = wset[w.key];
+          if (!s) return;
+          if (sid) {
+            const set = sets[sid],
+              P = getPx(set);
+            s.vw = sampleIdx(i, groups[set.idx]).length * P.W;
+            s.vh = P.H;
+          } else {
+            s.vw = s.w;
+            s.vh = s.h;
+          }
+          s.x = Math.min(s.x, Math.max(0, IMG_W - s.vw));
+          s.y = Math.min(s.y, Math.max(0, IMG_H - s.vh));
+        });
+        buildWidgetDOM();
+        updateWidgetTable();
+      }
+      function drawGlyphs() {
+        const c = document.getElementById("glyphCanvas");
+        if (!c || !templateBytes) return;
+        const x = c.getContext("2d");
+        x.clearRect(0, 0, c.width, c.height);
+        WIDGET_DEFS.forEach((w, i) => {
+          const s = widgetState[w.key],
+            sid = wset[w.key];
+          if (!s || !s.visible || !sid) return;
+          const set = sets[sid],
+            g = groups[set.idx],
+            P = getPx(set);
+          let px0 = s.x;
+          for (const gi of sampleIdx(i, g)) {
+            const tmp = document.createElement("canvas");
+            tmp.width = P.W;
+            tmp.height = P.H;
+            const t = tmp.getContext("2d"),
+              id = t.createImageData(P.W, P.H);
+            P.px[gi].forEach((v, k) => {
+              if (v === g.key) return;
+              const q = unpack565(v);
+              id.data.set([q[0], q[1], q[2], 255], k * 4);
+            });
+            t.putImageData(id, 0, 0);
+            x.drawImage(tmp, px0, s.y);
+            px0 += P.W;
+          }
+        });
+      }
 
-  for (const w of WIDGET_DEFS) {
-    const s = widgetState[w.key];
-    if (s.visible) {
-      writeU16LE(patched, xOff(w), s.x);
-      writeU16LE(patched, yOff(w), s.y);
-    } else {
-      writeU16LE(patched, xOff(w), HIDE_X);
-      writeU16LE(patched, yOff(w), HIDE_Y);
-      log(`${w.label}: hidden - wrote off-canvas position (${HIDE_X},${HIDE_Y}) instead of (${s.x},${s.y}).`);
-    }
-  }
-  log('Wrote widget X/Y positions into patched buffer.');
-  patched = applyGroupEdits(patched);
+      // ---- snapping + guides ----
+      function snapPos(key, nx, ny, vw, vh) {
+        const T = 4,
+          xs = [
+            [0, 0],
+            [(IMG_W - vw) / 2, 1],
+            [IMG_W - vw, 2],
+          ],
+          ys = [
+            [0, 0],
+            [(IMG_H - vh) / 2, 1],
+            [IMG_H - vh, 2],
+          ];
+        for (const o of WIDGET_DEFS) {
+          if (o.key === key) continue;
+          const t = widgetState[o.key];
+          if (!t || !t.visible) continue;
+          xs.push([t.x, 0], [t.x + (t.vw - vw) / 2, 1], [t.x + t.vw - vw, 2]);
+          ys.push([t.y, 0], [t.y + (t.vh - vh) / 2, 1], [t.y + t.vh - vh, 2]);
+        }
+        const best = (list, v) => {
+          let b = null,
+            bd = T + 0.01;
+          for (const [c, tag] of list) {
+            const dd = Math.abs(c - v);
+            if (dd < bd) {
+              bd = dd;
+              b = [c, tag];
+            }
+          }
+          return b;
+        };
+        const bx = best(xs, nx),
+          by = best(ys, ny);
+        return {
+          x: bx ? bx[0] : nx,
+          y: by ? by[0] : ny,
+          gx: bx ? bx[0] + (bx[1] * vw) / 2 : null,
+          gy: by ? by[0] + (by[1] * vh) / 2 : null,
+        };
+      }
+      function showGuides(sn) {
+        for (const [id, val, v] of [
+          ["guide-v", sn && sn.gx, true],
+          ["guide-h", sn && sn.gy, false],
+        ]) {
+          let el = document.getElementById(id);
+          if (!el) {
+            el = document.createElement("div");
+            el.id = id;
+            el.className = "guide " + (v ? "gv" : "gh");
+            stage.appendChild(el);
+          }
+          el.style.display = val == null ? "none" : "block";
+          if (val != null)
+            el.style[v ? "left" : "top"] = val * CANVAS_SCALE + "px";
+        }
+      }
+      function hideGuides() {
+        showGuides(null);
+      }
 
-  return patched;
-}
+      // ---- per-widget colour / font / size rows ----
+      function updateGroupTable() {
+        const box = document.getElementById("gtable");
+        box.innerHTML = "";
+        if (!templateBytes) return;
+        WIDGET_DEFS.forEach((w) => {
+          const sid = wset[w.key];
+          if (!sid) return;
+          const s = sets[sid],
+            g = groups[s.idx],
+            own = sid.includes(":"),
+            digits = g.kind === 4 && g.imgs.length >= 10;
+          const shared = !own && g.wkeys.length > 1,
+            canOwn = g.wkeys.length > 1 && g.wkeys[0] !== w.key;
+          const row = document.createElement("div");
+          row.className = "grow";
+          row.innerHTML = `<div><b>${w.label}</b> <span class="hint">${g.W}×${g.H} ×${g.imgs.length}${shared ? " · shared with " + g.members.filter((m) => m !== w.label).join(", ") : ""}</span></div>
+      <input type="color" class="cc" value="${s.color}" data-set="${sid}">
+      ${digits ? `<input type="text" class="cf" list="fontlist" placeholder="font" value="${s.font}" style="width:120px">` : ""}
+      <label class="hint">height <input type="number" class="ch" min="6" max="200" value="${s.H}" style="width:56px"></label>
+      ${canOwn ? `<label class="hint"><input type="checkbox" class="co" ${own ? "checked" : ""}> own set</label>` : ""}`;
+          box.appendChild(row);
+          row.querySelector(".cc").addEventListener("input", (e) => {
+            s.color = e.target.value;
+            box
+              .querySelectorAll(`.cc[data-set="${sid}"]`)
+              .forEach((o) => (o.value = s.color));
+            refreshAll();
+          });
+          const cf = row.querySelector(".cf");
+          if (cf)
+            cf.addEventListener("change", () => {
+              s.font = cf.value.trim();
+              refreshAll();
+            });
+          row.querySelector(".ch").addEventListener("change", (e) => {
+            s.H = Math.max(6, Math.min(200, +e.target.value || g.H));
+            updateGroupTable();
+            refreshAll();
+          });
+          const co = row.querySelector(".co");
+          if (co)
+            co.addEventListener("change", () => {
+              if (co.checked) {
+                const nid = g.idx + ":" + w.key;
+                sets[nid] = { ...s };
+                wset[w.key] = nid;
+              } else {
+                delete sets[sid];
+                wset[w.key] = String(g.idx);
+              }
+              updateGroupTable();
+              refreshAll();
+            });
+        });
+      }
 
-function buildWritesBodyLines(patched) {
-  const writes = buildTransfer(patched, TYPE_FACE);
-  log(`build_transfer(): ${writes.length} writes for a ${patched.length}-byte file (${Math.ceil(patched.length/BLOCK)} blocks).`);
-  return writes.map(w => bytesToHex(w));
-}
+      // ============================================================================
+      // Export
+      // ============================================================================
+      function downloadBlob(filename, blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 200);
+      }
 
-document.getElementById('btn-export-bin').addEventListener('click', () => {
-  try {
-    const patched = buildPatchedBin();
-    downloadBlob('patched.bin', new Blob([patched], { type: 'application/octet-stream' }));
-    log('Downloaded patched.bin.', 'ok');
-  } catch (err) {
-    log('Export failed: ' + err.message, 'err');
-  }
-});
+      function buildPatchedBin() {
+        if (!templateBytes)
+          throw new Error("Load a template (clean2.bin) first.");
+        let patched = new Uint8Array(templateBytes); // copy
 
-document.getElementById('btn-export-body').addEventListener('click', () => {
-  try {
-    const patched = buildPatchedBin();
-    const body = buildWritesBodyLines(patched);
-    let out = '';
-    body.forEach((h, i) => out += `${i + 1}\t${h}\n`);
-    downloadBlob('writes_body.txt', new Blob([out], { type: 'text/plain' }));
-    log(`Downloaded writes_body.txt (${body.length} lines).`, 'ok');
-  } catch (err) {
-    log('Export failed: ' + err.message, 'err');
-  }
-});
+        if (photoImg) {
+          const mode = document.getElementById("sel-fit").value;
+          const fitted = fitImageToCanvas(photoImg, IMG_W, IMG_H, mode);
+          const raw = toRGB565BE(fitted);
+          const off = imageOffsetCached;
+          if (raw.length !== IMG_W * IMG_H * 2)
+            throw new Error("unexpected image byte length");
+          patched.set(raw, off);
+          log(`Wrote ${raw.length} image bytes at 0x${off.toString(16)}.`);
+        } else {
+          log("No photo loaded — background left as template default.", "warn");
+        }
 
-document.getElementById('btn-export-full').addEventListener('click', () => {
-  try {
-    const patched = buildPatchedBin();
-    const body = buildWritesBodyLines(patched);
-    const all = [...preHex, ...body, ...postHex];
-    if (preHex.length === 0 || postHex.length === 0) {
-      log('Pre or post commands not loaded — writes_full.txt will only contain what you have.', 'warn');
-    }
-    let out = '';
-    all.forEach((h, i) => out += `${i + 1}\t${h}\n`);
-    downloadBlob('writes_full.txt', new Blob([out], { type: 'text/plain' }));
-    log(`Downloaded writes_full.txt: ${preHex.length} pre + ${body.length} body + ${postHex.length} post = ${all.length} lines.`, 'ok');
-  } catch (err) {
-    log('Export failed: ' + err.message, 'err');
-  }
-});
-</script>
-</body>
+        for (const w of WIDGET_DEFS) {
+          const s = widgetState[w.key];
+          if (s.visible) {
+            writeU16LE(patched, xOff(w), s.x);
+            writeU16LE(patched, yOff(w), s.y);
+          } else {
+            writeU16LE(patched, xOff(w), HIDE_X);
+            writeU16LE(patched, yOff(w), HIDE_Y);
+            log(
+              `${w.label}: hidden - wrote off-canvas position (${HIDE_X},${HIDE_Y}) instead of (${s.x},${s.y}).`,
+            );
+          }
+        }
+        log("Wrote widget X/Y positions into patched buffer.");
+        patched = applyGroupEdits(patched);
+
+        return patched;
+      }
+
+      function buildWritesBodyLines(patched) {
+        const writes = buildTransfer(patched, TYPE_FACE);
+        log(
+          `build_transfer(): ${writes.length} writes for a ${patched.length}-byte file (${Math.ceil(patched.length / BLOCK)} blocks).`,
+        );
+        return writes.map((w) => bytesToHex(w));
+      }
+
+      document
+        .getElementById("btn-export-bin")
+        .addEventListener("click", () => {
+          try {
+            const patched = buildPatchedBin();
+            downloadBlob(
+              "patched.bin",
+              new Blob([patched], { type: "application/octet-stream" }),
+            );
+            log("Downloaded patched.bin.", "ok");
+          } catch (err) {
+            log("Export failed: " + err.message, "err");
+          }
+        });
+
+      document
+        .getElementById("btn-export-body")
+        .addEventListener("click", () => {
+          try {
+            const patched = buildPatchedBin();
+            const body = buildWritesBodyLines(patched);
+            let out = "";
+            body.forEach((h, i) => (out += `${i + 1}\t${h}\n`));
+            downloadBlob(
+              "writes_body.txt",
+              new Blob([out], { type: "text/plain" }),
+            );
+            log(`Downloaded writes_body.txt (${body.length} lines).`, "ok");
+          } catch (err) {
+            log("Export failed: " + err.message, "err");
+          }
+        });
+
+      document
+        .getElementById("btn-export-full")
+        .addEventListener("click", () => {
+          try {
+            const patched = buildPatchedBin();
+            const body = buildWritesBodyLines(patched);
+            const all = [...preHex, ...body, ...postHex];
+            if (preHex.length === 0 || postHex.length === 0) {
+              log(
+                "Pre or post commands not loaded — writes_full.txt will only contain what you have.",
+                "warn",
+              );
+            }
+            let out = "";
+            all.forEach((h, i) => (out += `${i + 1}\t${h}\n`));
+            downloadBlob(
+              "writes_full.txt",
+              new Blob([out], { type: "text/plain" }),
+            );
+            log(
+              `Downloaded writes_full.txt: ${preHex.length} pre + ${body.length} body + ${postHex.length} post = ${all.length} lines.`,
+              "ok",
+            );
+          } catch (err) {
+            log("Export failed: " + err.message, "err");
+          }
+        });
+    </script>
+  </body>
 </html>
